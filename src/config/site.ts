@@ -1,4 +1,4 @@
-import logoImage from "../assets/images/lineup_logo_1789077839715.jpg";
+import logoImage from "../assets/logo.png";
 
 export interface Tournament {
   id: string;

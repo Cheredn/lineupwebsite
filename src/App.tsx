@@ -87,6 +87,9 @@ export default function App() {
   };
 
   const handleRegisterTournament = (tournament?: Tournament) => {
+    if (tournament) {
+      setSelectedTournament(tournament);
+    }
     handleScrollToSection("register");
   };
 
@@ -113,10 +116,14 @@ export default function App() {
           onRegisterClick={(t) => handleRegisterTournament(t)}
         />
 
-        {/* Google Form Real Registration Section */}
+        {/* Real Registration Section with full fields */}
         <RegistrationSection
+          tournaments={tournaments}
+          selectedTournament={selectedTournament}
           googleFormUrl={settings.googleFormUrl}
           googleFormEmbedUrl={settings.googleFormEmbedUrl}
+          telegramUrl={settings.telegramUrl}
+          telegramHandle={settings.telegramHandle}
         />
 
         {/* Tournament Bracket (GoodGame Integration) */}

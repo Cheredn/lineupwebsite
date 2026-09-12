@@ -11,6 +11,7 @@ export interface SiteSettings {
 const STORAGE_KEYS = {
   TOURNAMENTS: "lineup_tournaments_v1",
   SETTINGS: "lineup_settings_v1",
+  REGISTRATIONS: "lineup_registrations_v1",
   ADMIN_AUTH: "lineup_admin_auth_v1",
   ADMIN_PW: "lineup_admin_password_v1",
   DEVICE_AUTHORIZED: "lineup_device_authorized_v1",
@@ -140,6 +141,84 @@ export const setAdminPassword = (newPw: string): void => {
   } catch (e) {
     console.error("Failed to set admin password", e);
   }
+};
+
+export interface RegistrationSubmission {
+  id: string;
+  tournamentId: string;
+  tournamentTitle: string;
+  teamName: string;
+  captainNick: string;
+  captainContact: string;
+  player1: string;
+  player2: string;
+  player3: string;
+  player4: string;
+  player5: string;
+  substitute?: string;
+  steamProfile?: string;
+  status: "pending" | "approved" | "rejected";
+  submittedAt: string;
+}
+
+export const getStoredRegistrations = (): RegistrationSubmission[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.REGISTRATIONS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error("Failed to read registrations from localStorage", e);
+  }
+  return [];
+};
+
+export const saveStoredRegistrations = (list: RegistrationSubmission[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.REGISTRATIONS, JSON.stringify(list));
+  } catch (e) {
+    console.error("Failed to save registrations to localStorage", e);
+  }
+};
+
+export const addStoredRegistration = (
+  data: Omit<RegistrationSubmission, "id" | "submittedAt" | "status">
+): RegistrationSubmission => {
+  const newSubmission: RegistrationSubmission = {
+    ...data,
+    id: `reg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+    status: "pending",
+    submittedAt: new Date().toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+
+  const existing = getStoredRegistrations();
+  const updated = [newSubmission, ...existing];
+  saveStoredRegistrations(updated);
+  return newSubmission;
+};
+
+export const deleteStoredRegistration = (id: string): RegistrationSubmission[] => {
+  const existing = getStoredRegistrations();
+  const updated = existing.filter((item) => item.id !== id);
+  saveStoredRegistrations(updated);
+  return updated;
+};
+
+export const updateStoredRegistrationStatus = (
+  id: string,
+  status: "pending" | "approved" | "rejected"
+): RegistrationSubmission[] => {
+  const existing = getStoredRegistrations();
+  const updated = existing.map((item) => (item.id === id ? { ...item, status } : item));
+  saveStoredRegistrations(updated);
+  return updated;
 };
 
 export const resetToDefaults = (): { tournaments: Tournament[]; settings: SiteSettings } => {

@@ -13,7 +13,7 @@ export const Hero: React.FC<HeroProps> = ({
   onJoinClick,
   onViewBracketClick,
 }) => {
-  const activeTournament = featuredTournament || SITE_CONFIG.tournaments[0];
+  const activeTournament = featuredTournament;
   return (
     <section
       id="hero"
@@ -42,7 +42,7 @@ export const Hero: React.FC<HeroProps> = ({
 
       <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
         {/* Status Pill */}
-        {activeTournament && (
+        {activeTournament ? (
           <div
             id="hero-status-badge"
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-950/80 border border-white/15 backdrop-blur-md mb-8 shadow-lg shadow-black/60 hover:border-white/30 transition-all duration-300"
@@ -56,6 +56,18 @@ export const Hero: React.FC<HeroProps> = ({
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 font-mono-tech border border-amber-400/20">
               {activeTournament.prizePool}
+            </span>
+          </div>
+        ) : (
+          <div
+            id="hero-status-badge"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-950/80 border border-white/15 backdrop-blur-md mb-8 shadow-lg shadow-black/60 hover:border-white/30 transition-all duration-300"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-neutral-500" />
+            </span>
+            <span className="font-mono-tech text-[11px] tracking-widest text-neutral-300 uppercase">
+              СЕЗОН 2026 // АНОНС СЛЕДУЮЩЕГО ТУРНИРА СКОРО
             </span>
           </div>
         )}

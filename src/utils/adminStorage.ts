@@ -50,12 +50,20 @@ export const getSecretAdminUrl = (): string => {
   return `${origin}${pathname}?admin=${SECRET_ADMIN_KEY}`;
 };
 
+export const formatGoogleFormEmbedUrl = (url: string): string => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (trimmed.includes("embedded=true")) return trimmed;
+  if (trimmed.includes("?")) return `${trimmed}&embedded=true`;
+  return `${trimmed}?embedded=true`;
+};
+
 export const getStoredTournaments = (): Tournament[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -85,7 +93,18 @@ export const getStoredSettings = (): SiteSettings => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (raw) {
-      return { ...defaults, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      // Migration: If the user previously saved the old demo form, automatically migrate to the new one
+      if (
+        !parsed.googleFormUrl ||
+        parsed.googleFormUrl.includes("1FAIpQLSeRDk7oKXxGXIGe2FpjeAXNpjdpIZr-xjv3KuTsky6wk3_CLA")
+      ) {
+        parsed.googleFormUrl = SITE_CONFIG.googleFormUrl;
+        parsed.googleFormEmbedUrl = SITE_CONFIG.googleFormEmbedUrl;
+      } else if (!parsed.googleFormEmbedUrl || !parsed.googleFormEmbedUrl.includes("embedded=true")) {
+        parsed.googleFormEmbedUrl = formatGoogleFormEmbedUrl(parsed.googleFormUrl);
+      }
+      return { ...defaults, ...parsed };
     }
   } catch (e) {
     console.error("Failed to load settings from localStorage", e);
@@ -95,7 +114,11 @@ export const getStoredSettings = (): SiteSettings => {
 
 export const saveStoredSettings = (settings: SiteSettings): void => {
   try {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    const sanitized: SiteSettings = {
+      ...settings,
+      googleFormEmbedUrl: formatGoogleFormEmbedUrl(settings.googleFormUrl),
+    };
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(sanitized));
   } catch (e) {
     console.error("Failed to save settings to localStorage", e);
   }

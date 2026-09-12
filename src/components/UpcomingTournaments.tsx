@@ -13,7 +13,7 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
   onSelectTournament,
   onRegisterClick,
 }) => {
-  const displayTournaments = tournaments || SITE_CONFIG.tournaments;
+  const displayTournaments = tournaments !== undefined ? tournaments : SITE_CONFIG.tournaments;
   return (
     <section id="tournaments" className="py-24 px-4 sm:px-6 lg:px-8 bg-black relative">
       {/* Background divider glow */}

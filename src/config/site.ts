@@ -64,8 +64,8 @@ export const SITE_CONFIG = {
   logo: logoImage || "/assets/logo.png",
   
   // Registration Google Form URLs provided by the user
-  googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeRDk7oKXxGXIGe2FpjeAXNpjdpIZr-xjv3KuTsky6wk3_CLA/viewform?usp=dialog",
-  googleFormEmbedUrl: "https://docs.google.com/forms/d/e/1FAIpQLSeRDk7oKXxGXIGe2FpjeAXNpjdpIZr-xjv3KuTsky6wk3_CLA/viewform?embedded=true",
+  googleFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLScMcHvsl6MQWNxmqhalPbu6v2zcneoslkwHGS1V583CPtaaOQ/viewform",
+  googleFormEmbedUrl: "https://docs.google.com/forms/d/e/1FAIpQLScMcHvsl6MQWNxmqhalPbu6v2zcneoslkwHGS1V583CPtaaOQ/viewform?embedded=true",
   
   // Official Telegram Channel & Community URL
   telegramUrl: "https://t.me/LineUpT",

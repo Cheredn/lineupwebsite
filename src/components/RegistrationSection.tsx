@@ -1,5 +1,6 @@
 import React from "react";
 import { SITE_CONFIG } from "../config/site";
+import { formatGoogleFormEmbedUrl } from "../utils/adminStorage";
 import { ExternalLink, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 interface RegistrationSectionProps {
@@ -8,11 +9,14 @@ interface RegistrationSectionProps {
 }
 
 export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
-  googleFormUrl = SITE_CONFIG.googleFormUrl,
-  googleFormEmbedUrl = SITE_CONFIG.googleFormEmbedUrl,
+  googleFormUrl,
+  googleFormEmbedUrl,
 }) => {
-  const directFormUrl = googleFormUrl;
-  const embedFormUrl = googleFormEmbedUrl;
+  const directFormUrl = googleFormUrl || SITE_CONFIG.googleFormUrl;
+  const embedFormUrl =
+    googleFormEmbedUrl && googleFormEmbedUrl.includes("embedded=true")
+      ? googleFormEmbedUrl
+      : formatGoogleFormEmbedUrl(directFormUrl);
 
   return (
     <section id="register" className="py-24 px-4 sm:px-6 lg:px-8 bg-black relative">
@@ -85,6 +89,7 @@ export const RegistrationSection: React.FC<RegistrationSectionProps> = ({
           {/* THE REAL GOOGLE FORM IFRAME */}
           <div className="w-full bg-neutral-950 rounded-xl overflow-hidden border border-white/10 min-h-[650px] sm:min-h-[750px] md:min-h-[820px] relative">
             <iframe
+              key={embedFormUrl}
               src={embedFormUrl}
               id="lineup-google-form-iframe"
               title="Google-форма регистрации команды LINEUP TOURNAMENTS"

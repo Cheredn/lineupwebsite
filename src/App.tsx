@@ -116,14 +116,10 @@ export default function App() {
           onRegisterClick={(t) => handleRegisterTournament(t)}
         />
 
-        {/* Real Registration Section with full fields */}
+        {/* Google Form Registration Section */}
         <RegistrationSection
-          tournaments={tournaments}
-          selectedTournament={selectedTournament}
           googleFormUrl={settings.googleFormUrl}
           googleFormEmbedUrl={settings.googleFormEmbedUrl}
-          telegramUrl={settings.telegramUrl}
-          telegramHandle={settings.telegramHandle}
         />
 
         {/* Tournament Bracket (GoodGame Integration) */}

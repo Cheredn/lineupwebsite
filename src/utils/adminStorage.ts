@@ -1,4 +1,5 @@
 import { SITE_CONFIG, Tournament } from "../config/site";
+import { RankedTeam, INITIAL_RANKED_TEAMS, DEFAULT_SEASONS } from "../config/ranking";
 
 export interface SiteSettings {
   telegramUrl: string;
@@ -11,6 +12,8 @@ export interface SiteSettings {
 const STORAGE_KEYS = {
   TOURNAMENTS: "lineup_tournaments_v1",
   SETTINGS: "lineup_settings_v1",
+  RANKED_TEAMS: "lineup_ranked_teams_v1",
+  SEASONS: "lineup_seasons_v1",
   ADMIN_AUTH: "lineup_admin_auth_v1",
   ADMIN_PW: "lineup_admin_password_v1",
   DEVICE_AUTHORIZED: "lineup_device_authorized_v1",
@@ -142,11 +145,122 @@ export const setAdminPassword = (newPw: string): void => {
   }
 };
 
-export const resetToDefaults = (): { tournaments: Tournament[]; settings: SiteSettings } => {
+// Demo team IDs that should be cleaned out if present from previous version
+const DEMO_TEAM_IDS = new Set([
+  "team-1", "team-2", "team-3", "team-4", "team-5",
+  "team-6", "team-7", "team-8", "team-9", "team-10",
+  "team-11", "team-12", "team-13", "team-14", "team-15"
+]);
+
+export const getStoredRankedTeams = (): RankedTeam[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.RANKED_TEAMS);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        // Filter out legacy demo mock teams if they were previously saved
+        const realTeams = parsed.filter((t) => !DEMO_TEAM_IDS.has(t.id));
+        if (realTeams.length !== parsed.length) {
+          saveStoredRankedTeams(realTeams);
+        }
+        return realTeams.sort((a, b) => (b.points || 0) - (a.points || 0));
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load ranked teams from localStorage", e);
+  }
+  return [];
+};
+
+export const saveStoredRankedTeams = (teams: RankedTeam[]): void => {
+  try {
+    // Always sort descending before saving
+    const sorted = [...teams].sort((a, b) => (b.points || 0) - (a.points || 0));
+    localStorage.setItem(STORAGE_KEYS.RANKED_TEAMS, JSON.stringify(sorted));
+  } catch (e) {
+    console.error("Failed to save ranked teams to localStorage", e);
+  }
+};
+
+export const addStoredRankedTeam = (
+  team: Omit<RankedTeam, "id">
+): RankedTeam[] => {
+  const existing = getStoredRankedTeams();
+  const newTeam: RankedTeam = {
+    ...team,
+    id: `team-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+  };
+  const updated = [newTeam, ...existing].sort((a, b) => (b.points || 0) - (a.points || 0));
+  saveStoredRankedTeams(updated);
+  return updated;
+};
+
+export const updateStoredRankedTeam = (
+  id: string,
+  updates: Partial<RankedTeam>
+): RankedTeam[] => {
+  const existing = getStoredRankedTeams();
+  const updated = existing
+    .map((t) => (t.id === id ? { ...t, ...updates } : t))
+    .sort((a, b) => (b.points || 0) - (a.points || 0));
+  saveStoredRankedTeams(updated);
+  return updated;
+};
+
+export const deleteStoredRankedTeam = (id: string): RankedTeam[] => {
+  const existing = getStoredRankedTeams();
+  const updated = existing.filter((t) => t.id !== id);
+  saveStoredRankedTeams(updated);
+  return updated;
+};
+
+export const getStoredSeasons = (): string[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SEASONS);
+    if (raw !== null) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load seasons from localStorage", e);
+  }
+  return DEFAULT_SEASONS;
+};
+
+export const saveStoredSeasons = (seasons: string[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SEASONS, JSON.stringify(seasons));
+  } catch (e) {
+    console.error("Failed to save seasons to localStorage", e);
+  }
+};
+
+export const addStoredSeason = (newSeason: string): string[] => {
+  const trimmed = newSeason.trim();
+  if (!trimmed) return getStoredSeasons();
+  const existing = getStoredSeasons();
+  if (!existing.includes(trimmed)) {
+    const updated = [...existing, trimmed];
+    saveStoredSeasons(updated);
+    return updated;
+  }
+  return existing;
+};
+
+export const resetToDefaults = (): {
+  tournaments: Tournament[];
+  settings: SiteSettings;
+  rankedTeams: RankedTeam[];
+  seasons: string[];
+} => {
   try {
     localStorage.removeItem(STORAGE_KEYS.TOURNAMENTS);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
     localStorage.removeItem(STORAGE_KEYS.ADMIN_PW);
+    localStorage.removeItem(STORAGE_KEYS.RANKED_TEAMS);
+    localStorage.removeItem(STORAGE_KEYS.SEASONS);
   } catch (e) {
     console.error("Failed to reset storage", e);
   }
@@ -159,5 +273,7 @@ export const resetToDefaults = (): { tournaments: Tournament[]; settings: SiteSe
       googleFormEmbedUrl: SITE_CONFIG.googleFormEmbedUrl,
       bracketUrl: SITE_CONFIG.bracketUrl,
     },
+    rankedTeams: [],
+    seasons: DEFAULT_SEASONS,
   };
 };

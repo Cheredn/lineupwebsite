@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Tournament, SITE_CONFIG } from "./config/site";
+import { RankedTeam } from "./config/ranking";
 import {
   getStoredTournaments,
   saveStoredTournaments,
   getStoredSettings,
   saveStoredSettings,
+  getStoredRankedTeams,
+  saveStoredRankedTeams,
+  getStoredSeasons,
+  saveStoredSeasons,
   resetToDefaults,
   SiteSettings,
   authorizeCurrentDevice,
@@ -20,14 +25,25 @@ import { TelegramSection } from "./components/TelegramSection";
 import { Footer } from "./components/Footer";
 import { TournamentModal } from "./components/TournamentModal";
 import { AdminModal } from "./components/AdminModal";
+import { LeaderboardPage } from "./components/LeaderboardPage";
+import { Award, ChevronRight, Trophy } from "lucide-react";
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState<"home" | "leaderboard">(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#leaderboard") {
+      return "leaderboard";
+    }
+    return "home";
+  });
+
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments());
   const [settings, setSettings] = useState<SiteSettings>(() => getStoredSettings());
+  const [rankedTeams, setRankedTeams] = useState<RankedTeam[]>(() => getStoredRankedTeams());
+  const [seasons, setSeasons] = useState<string[]>(() => getStoredSeasons());
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
 
-  // Secret entry detection: URL params, hash, and keyboard shortcut
+  // Secret entry detection & hash synchronization
   useEffect(() => {
     // 1. Check for secret organizer URL (?admin=lineup2026 or ?secret=lineup2026 or #lineup2026)
     const urlParams = new URLSearchParams(window.location.search);
@@ -52,6 +68,8 @@ export default function App() {
     const handleHashChange = () => {
       if (window.location.hash === "#admin" || window.location.hash.includes(SECRET_ADMIN_KEY)) {
         setIsAdminOpen(true);
+      } else if (window.location.hash === "#leaderboard") {
+        setCurrentPage("leaderboard");
       }
     };
 
@@ -63,6 +81,17 @@ export default function App() {
     };
   }, []);
 
+  const handleNavigate = (page: "home" | "leaderboard") => {
+    setCurrentPage(page);
+    if (page === "leaderboard") {
+      window.location.hash = "#leaderboard";
+    } else {
+      if (window.location.hash === "#leaderboard") {
+        history.pushState("", document.title, window.location.pathname + window.location.search);
+      }
+    }
+  };
+
   const handleUpdateTournaments = (updated: Tournament[]) => {
     setTournaments(updated);
     saveStoredTournaments(updated);
@@ -73,16 +102,39 @@ export default function App() {
     saveStoredSettings(updated);
   };
 
+  const handleUpdateRankedTeams = (updated: RankedTeam[]) => {
+    setRankedTeams(updated);
+    saveStoredRankedTeams(updated);
+  };
+
+  const handleUpdateSeasons = (updated: string[]) => {
+    setSeasons(updated);
+    saveStoredSeasons(updated);
+  };
+
   const handleResetAll = () => {
-    const { tournaments: defTournaments, settings: defSettings } = resetToDefaults();
+    const {
+      tournaments: defTournaments,
+      settings: defSettings,
+      rankedTeams: defTeams,
+      seasons: defSeasons,
+    } = resetToDefaults();
     setTournaments(defTournaments);
     setSettings(defSettings);
+    setRankedTeams(defTeams);
+    setSeasons(defSeasons);
   };
 
   const handleScrollToSection = (sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
+    if (currentPage !== "home") {
+      handleNavigate("home");
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } else {
+      const el = document.getElementById(sectionId);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -95,45 +147,95 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-neutral-200 selection:bg-neutral-800 selection:text-white flex flex-col font-sans">
-      {/* Sticky Navbar with official logo */}
+      {/* Sticky Navbar with official logo & leaderboard page navigation */}
       <Navbar
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
         onOpenRegister={() => handleScrollToSection("register")}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full">
-        {/* Hero Section */}
-        <Hero
-          featuredTournament={tournaments[0]}
-          onJoinClick={() => handleScrollToSection("register")}
-          onViewBracketClick={() => handleScrollToSection("bracket")}
+      {/* Main Content Area: switches between Home and Leaderboard page */}
+      {currentPage === "leaderboard" ? (
+        <LeaderboardPage
+          teams={rankedTeams}
+          seasons={seasons}
+          onBackToHome={() => handleNavigate("home")}
         />
+      ) : (
+        <main className="flex-1 w-full">
+          {/* Hero Section */}
+          <Hero
+            featuredTournament={tournaments[0]}
+            onJoinClick={() => handleScrollToSection("register")}
+            onViewBracketClick={() => handleScrollToSection("bracket")}
+          />
 
-        {/* Upcoming Tournaments Section */}
-        <UpcomingTournaments
-          tournaments={tournaments}
-          onSelectTournament={(t) => setSelectedTournament(t)}
-          onRegisterClick={(t) => handleRegisterTournament(t)}
-        />
+          {/* Upcoming Tournaments Section */}
+          <UpcomingTournaments
+            tournaments={tournaments}
+            onSelectTournament={(t) => setSelectedTournament(t)}
+            onRegisterClick={(t) => handleRegisterTournament(t)}
+          />
 
-        {/* Google Form Registration Section */}
-        <RegistrationSection
-          googleFormUrl={settings.googleFormUrl}
-          googleFormEmbedUrl={settings.googleFormEmbedUrl}
-        />
+          {/* Leaderboard Teaser Banner */}
+          <section className="py-10 bg-gradient-to-b from-black via-neutral-950 to-black border-y border-white/5 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent pointer-events-none" />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+              <div className="p-6 sm:p-8 rounded-2xl bg-neutral-900/60 border border-white/10 hover:border-amber-400/30 transition-all flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/5">
+                    <Award className="w-7 h-7 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono-tech uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
+                        ТАБЛИЦА РЕЙТИНГА
+                      </span>
+                      <span className="text-xs text-neutral-400 font-mono-tech">
+                        • ТОП-15 КОМАНД ЛИГИ
+                      </span>
+                    </div>
+                    <h3 className="font-display font-extrabold text-lg sm:text-xl text-white">
+                      Рейтинг лучших киберспортивных команд
+                    </h3>
+                    <p className="text-xs sm:text-sm text-neutral-400 max-w-xl">
+                      Следите за положением команд в текущем сезоне, набранными очками и претендентами на чемпионские медали.
+                    </p>
+                  </div>
+                </div>
 
-        {/* Tournament Bracket (GoodGame Integration) */}
-        <TournamentBracket bracketUrl={settings.bracketUrl} />
+                <button
+                  type="button"
+                  onClick={() => handleNavigate("leaderboard")}
+                  className="btn-chrome px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shrink-0 cursor-pointer shadow-xl hover:shadow-amber-500/10"
+                >
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  <span>Открыть рейтинг команд</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </section>
 
-        {/* Rules Accordion Section */}
-        <RulesAccordion />
+          {/* Google Form Registration Section */}
+          <RegistrationSection
+            googleFormUrl={settings.googleFormUrl}
+            googleFormEmbedUrl={settings.googleFormEmbedUrl}
+          />
 
-        {/* Telegram Channel & Community Section */}
-        <TelegramSection
-          telegramUrl={settings.telegramUrl}
-          telegramHandle={settings.telegramHandle}
-        />
-      </main>
+          {/* Tournament Bracket (GoodGame Integration) */}
+          <TournamentBracket bracketUrl={settings.bracketUrl} />
+
+          {/* Rules Accordion Section */}
+          <RulesAccordion />
+
+          {/* Telegram Channel & Community Section */}
+          <TelegramSection
+            telegramUrl={settings.telegramUrl}
+            telegramHandle={settings.telegramHandle}
+          />
+        </main>
+      )}
 
       {/* Official Footer */}
       <Footer />
@@ -158,6 +260,10 @@ export default function App() {
         onSaveTournaments={handleUpdateTournaments}
         settings={settings}
         onSaveSettings={handleUpdateSettings}
+        rankedTeams={rankedTeams}
+        onSaveRankedTeams={handleUpdateRankedTeams}
+        seasons={seasons}
+        onSaveSeasons={handleUpdateSeasons}
         onResetAll={handleResetAll}
       />
     </div>

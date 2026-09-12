@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { SITE_CONFIG } from "../config/site";
-import { Menu, X, Shield, ExternalLink, Trophy } from "lucide-react";
+import { Menu, X, Shield, ExternalLink, Trophy, Award, Flame } from "lucide-react";
 
 interface NavbarProps {
+  currentPage: "home" | "leaderboard";
+  onNavigate: (page: "home" | "leaderboard") => void;
   onOpenRegister?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onOpenRegister }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -18,32 +20,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const navLinks = [
-    { label: "ГЛАВНАЯ", href: "#hero" },
-    { label: "ТУРНИРЫ", href: "#tournaments" },
-    { label: "РЕГИСТРАЦИЯ", href: "#register" },
-    { label: "СЕТКА", href: "#bracket" },
-    { label: "ПРАВИЛА", href: "#rules" },
-    { label: "TELEGRAM", href: "#telegram" },
-  ];
-
-  const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
+  const handleNavClick = (sectionId?: string) => {
     setMobileMenuOpen(false);
-    const target = document.querySelector(href);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
+    if (currentPage !== "home") {
+      onNavigate("home");
+      setTimeout(() => {
+        if (sectionId) {
+          const target = document.getElementById(sectionId);
+          if (target) target.scrollIntoView({ behavior: "smooth" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 100);
+    } else {
+      if (sectionId) {
+        const target = document.getElementById(sectionId);
+        if (target) target.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
+  };
+
+  const handleGoToLeaderboard = () => {
+    setMobileMenuOpen(false);
+    onNavigate("leaderboard");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleJoinClick = () => {
     setMobileMenuOpen(false);
-    if (onOpenRegister) {
-      onOpenRegister();
+    if (currentPage !== "home") {
+      onNavigate("home");
+      setTimeout(() => {
+        if (onOpenRegister) {
+          onOpenRegister();
+        } else {
+          const regSection = document.getElementById("register");
+          if (regSection) regSection.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
     } else {
-      const regSection = document.getElementById("register");
-      if (regSection) {
-        regSection.scrollIntoView({ behavior: "smooth" });
+      if (onOpenRegister) {
+        onOpenRegister();
+      } else {
+        const regSection = document.getElementById("register");
+        if (regSection) regSection.scrollIntoView({ behavior: "smooth" });
       }
     }
   };
@@ -59,11 +81,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Official Brand Logo */}
-        <a
-          href="#hero"
-          onClick={(e) => handleScrollTo(e, "#hero")}
+        <button
+          type="button"
+          onClick={() => handleNavClick()}
           id="navbar-logo-link"
-          className="flex items-center gap-3 group select-none cursor-pointer"
+          className="flex items-center gap-3 group select-none cursor-pointer bg-transparent border-0 text-left p-0"
         >
           <div className="relative w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-lg bg-black overflow-hidden border border-white/10 group-hover:border-white/30 transition-all duration-300">
             <img
@@ -83,21 +105,79 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
               TOURNAMENTS
             </span>
           </div>
-        </a>
+        </button>
 
         {/* Desktop Navigation Links */}
         <nav id="desktop-nav-links" className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              onClick={(e) => handleScrollTo(e, link.href)}
-              id={`nav-link-${link.label.toLowerCase()}`}
-              className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200"
-            >
-              {link.label}
-            </a>
-          ))}
+          <button
+            type="button"
+            onClick={() => handleNavClick()}
+            className={`px-3.5 py-1.5 text-xs font-semibold tracking-wider rounded-md transition-all duration-200 cursor-pointer ${
+              currentPage === "home"
+                ? "text-white bg-white/10"
+                : "text-neutral-300 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            ГЛАВНАЯ
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNavClick("tournaments")}
+            className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          >
+            ТУРНИРЫ
+          </button>
+
+          {/* Leaderboard Page Link (Highlighted with Gold/Amber Award) */}
+          <button
+            type="button"
+            onClick={handleGoToLeaderboard}
+            id="nav-link-leaderboard"
+            className={`px-3.5 py-1.5 text-xs font-bold tracking-wider rounded-md transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+              currentPage === "leaderboard"
+                ? "bg-amber-500/20 text-amber-300 border border-amber-400/40 shadow-sm shadow-amber-500/10"
+                : "text-amber-400 hover:text-amber-300 hover:bg-amber-400/10"
+            }`}
+          >
+            <Award className="w-3.5 h-3.5 text-amber-400" />
+            <span>РЕЙТИНГ КОМАНД</span>
+            <span className="text-[9px] px-1 py-0.2 rounded bg-amber-400/20 text-amber-300 font-mono-tech">
+              ТОП
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNavClick("register")}
+            className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          >
+            РЕГИСТРАЦИЯ
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNavClick("bracket")}
+            className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          >
+            СЕТКА
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNavClick("rules")}
+            className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          >
+            ПРАВИЛА
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNavClick("telegram")}
+            className="px-3.5 py-1.5 text-xs font-semibold tracking-wider text-neutral-300 hover:text-white rounded-md hover:bg-white/5 transition-all duration-200 cursor-pointer"
+          >
+            TELEGRAM
+          </button>
         </nav>
 
         {/* Right CTA Actions */}
@@ -117,7 +197,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
           <button
             onClick={handleJoinClick}
             id="nav-mobile-join-btn"
-            className="sm:hidden btn-chrome px-3 py-1.5 rounded-md text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5"
+            className="sm:hidden btn-chrome px-3 py-1.5 rounded-md text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 cursor-pointer"
           >
             <span>УЧАСТИЕ</span>
           </button>
@@ -126,7 +206,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             id="mobile-menu-toggle-btn"
             aria-label="Открыть меню"
-            className="p-2 rounded-lg bg-neutral-900/80 border border-white/10 text-neutral-300 hover:text-white hover:border-white/20 transition-colors"
+            className="p-2 rounded-lg bg-neutral-900/80 border border-white/10 text-neutral-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -140,17 +220,80 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegister }) => {
           className="lg:hidden bg-black/95 backdrop-blur-2xl border-b border-white/10 px-4 pt-3 pb-6 mt-2 animate-in fade-in slide-in-from-top-3 duration-200"
         >
           <div className="flex flex-col space-y-2">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={(e) => handleScrollTo(e, link.href)}
-                className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between"
-              >
-                <span>{link.label}</span>
-                <span className="text-[10px] text-neutral-600 font-mono-tech">0{navLinks.indexOf(link) + 1}</span>
-              </a>
-            ))}
+            <button
+              type="button"
+              onClick={() => handleNavClick()}
+              className={`px-4 py-2.5 text-sm font-medium tracking-wide rounded-lg transition-colors flex items-center justify-between text-left ${
+                currentPage === "home" ? "bg-white/10 text-white" : "text-neutral-300 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <span>ГЛАВНАЯ</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">01</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick("tournaments")}
+              className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between text-left"
+            >
+              <span>ТУРНИРЫ</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">02</span>
+            </button>
+
+            {/* Mobile Leaderboard Link */}
+            <button
+              type="button"
+              onClick={handleGoToLeaderboard}
+              className={`px-4 py-2.5 text-sm font-bold tracking-wide rounded-lg transition-colors flex items-center justify-between text-left ${
+                currentPage === "leaderboard"
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-400/40"
+                  : "text-amber-400 hover:text-amber-300 hover:bg-amber-400/10"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-400" />
+                <span>РЕЙТИНГ КОМАНД</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-mono-tech">
+                ТОП
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick("register")}
+              className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between text-left"
+            >
+              <span>РЕГИСТРАЦИЯ</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">04</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick("bracket")}
+              className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between text-left"
+            >
+              <span>ТУРНИРНАЯ СЕТКА</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">05</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick("rules")}
+              className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between text-left"
+            >
+              <span>ПРАВИЛА И РЕГЛАМЕНТ</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">06</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleNavClick("telegram")}
+              className="px-4 py-2.5 text-sm font-medium tracking-wide text-neutral-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex items-center justify-between text-left"
+            >
+              <span>TELEGRAM КАНАЛ</span>
+              <span className="text-[10px] text-neutral-600 font-mono-tech">07</span>
+            </button>
 
             <div className="pt-3 border-t border-white/10 mt-2">
               <button

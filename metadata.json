@@ -1,6 +1,6 @@
 {
   "name": "LINEUP TOURNAMENTS",
-  "description": "Официальная платформа турниров CS2 от LINEUP TOURNAMENTS. Регистрация команд через Google Форму, сетка турнира, регламент и сообщество в Telegram.",
+  "description": "Официальная платформа турниров CS2 от LINEUP TOURNAMENTS. Рейтинг лучших команд и топ сезона, регистрация через Google Форму, сетка турнира, регламент и админ-панель.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

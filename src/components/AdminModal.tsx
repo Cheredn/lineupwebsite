@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tournament } from "../config/site";
+import { RankedTeam, DEFAULT_TEAM_AVATAR, processImageFile } from "../config/ranking";
 import {
   SiteSettings,
   getAdminPassword,
@@ -35,6 +36,16 @@ import {
   Users,
   ShieldCheck,
   ExternalLink,
+  Award,
+  Medal,
+  Crown,
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  RefreshCw,
+  Search,
+  Upload,
+  ImagePlus,
 } from "lucide-react";
 
 interface AdminModalProps {
@@ -44,6 +55,10 @@ interface AdminModalProps {
   onSaveTournaments: (tournaments: Tournament[]) => void;
   settings: SiteSettings;
   onSaveSettings: (settings: SiteSettings) => void;
+  rankedTeams: RankedTeam[];
+  onSaveRankedTeams: (teams: RankedTeam[]) => void;
+  seasons: string[];
+  onSaveSeasons: (seasons: string[]) => void;
   onResetAll: () => void;
 }
 
@@ -87,6 +102,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onSaveTournaments,
   settings,
   onSaveSettings,
+  rankedTeams,
+  onSaveRankedTeams,
+  seasons,
+  onSaveSeasons,
   onResetAll,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isDeviceAuthorized());
@@ -94,8 +113,40 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [authError, setAuthError] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  // Active sub-tab inside admin: "list" | "form" | "access" | "settings"
-  const [activeTab, setActiveTab] = useState<"list" | "form" | "access" | "settings">("list");
+  // Active sub-tab inside admin: "list" | "form" | "ranking" | "access" | "settings"
+  const [activeTab, setActiveTab] = useState<"list" | "form" | "ranking" | "access" | "settings">("list");
+
+  // Ranking state
+  const [rankingSeason, setRankingSeason] = useState<string>(seasons[0] || "Сезон 1 (2026)");
+  const [newTeamName, setNewTeamName] = useState<string>("");
+  const [newTeamTag, setNewTeamTag] = useState<string>("");
+  const [newTeamPoints, setNewTeamPoints] = useState<string>("1000");
+  const [newTeamAvatar, setNewTeamAvatar] = useState<string>(DEFAULT_TEAM_AVATAR);
+  const [newTeamSeason, setNewTeamSeason] = useState<string>(seasons[0] || "Сезон 1 (2026)");
+  const [rankingMessage, setRankingMessage] = useState<string>("");
+  const [rankingError, setRankingError] = useState<string>("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+
+  // File input refs for gallery avatar selection
+  const newAvatarFileRef = useRef<HTMLInputElement>(null);
+  const editAvatarFileRef = useRef<HTMLInputElement>(null);
+
+  // Season management state
+  const [showAddSeason, setShowAddSeason] = useState<boolean>(false);
+  const [newSeasonInput, setNewSeasonInput] = useState<string>("");
+
+  // Editing existing team in ranking
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editTeamData, setEditTeamData] = useState<{
+    name: string;
+    tag: string;
+    points: number;
+    avatar: string;
+    season: string;
+  }>({ name: "", tag: "", points: 0, avatar: "", season: "" });
+
+  // Confirmation for deleting team
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Tournament editor state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -318,6 +369,169 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     }
   };
 
+  // Ranking & Leaderboard handlers
+  const handleAdjustPoints = (teamId: string, delta: number) => {
+    const updated = rankedTeams.map((t) => {
+      if (t.id === teamId) {
+        const newPts = Math.max(0, (t.points || 0) + delta);
+        return {
+          ...t,
+          points: newPts,
+          trend: delta > 0 ? ("up" as const) : delta < 0 ? ("down" as const) : ("same" as const),
+        };
+      }
+      return t;
+    });
+    // Auto-sort descending so the team immediately moves up/down
+    const sorted = updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+    onSaveRankedTeams(sorted);
+    setRankingMessage(`Очки команды обновлены (${delta > 0 ? `+${delta}` : delta} PTS). Позиция в рейтинге пересчитана.`);
+    setTimeout(() => setRankingMessage(""), 3000);
+  };
+
+  const handleSetPointsDirect = (teamId: string, pointsVal: number) => {
+    const safePts = Math.max(0, isNaN(pointsVal) ? 0 : pointsVal);
+    const updated = rankedTeams.map((t) => {
+      if (t.id === teamId) {
+        const oldPts = t.points || 0;
+        return {
+          ...t,
+          points: safePts,
+          trend: safePts > oldPts ? ("up" as const) : safePts < oldPts ? ("down" as const) : ("same" as const),
+        };
+      }
+      return t;
+    });
+    const sorted = updated.sort((a, b) => (b.points || 0) - (a.points || 0));
+    onSaveRankedTeams(sorted);
+    setRankingMessage("Очки успешно сохранены! Позиция команды в топе обновлена.");
+    setTimeout(() => setRankingMessage(""), 3000);
+  };
+
+  // Upload and process image from gallery / files
+  const handleFileChosen = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEditing = false
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    setRankingError("");
+    try {
+      const dataUrl = await processImageFile(file, 256);
+      if (isEditing) {
+        setEditTeamData((prev) => ({ ...prev, avatar: dataUrl }));
+      } else {
+        setNewTeamAvatar(dataUrl);
+      }
+    } catch (err: any) {
+      setRankingError(err.message || "Не удалось обработать выбранное изображение");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleAddRankedTeam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeamName.trim()) {
+      setRankingError("Введите название команды");
+      return;
+    }
+    const pointsNum = parseInt(newTeamPoints, 10);
+    if (isNaN(pointsNum)) {
+      setRankingError("Укажите корректное количество очков (число)");
+      return;
+    }
+
+    const newTeam: RankedTeam = {
+      id: `team-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      name: newTeamName.trim(),
+      tag: newTeamTag.trim().toUpperCase() || newTeamName.slice(0, 3).toUpperCase(),
+      avatar: newTeamAvatar.trim() || DEFAULT_TEAM_AVATAR,
+      points: pointsNum,
+      season: newTeamSeason || rankingSeason,
+      matchesPlayed: 0,
+      winRate: "0%",
+      trend: "same",
+    };
+
+    const updated = [newTeam, ...rankedTeams].sort((a, b) => (b.points || 0) - (a.points || 0));
+    onSaveRankedTeams(updated);
+
+    // Reset form
+    setNewTeamName("");
+    setNewTeamTag("");
+    setNewTeamPoints("1000");
+    setNewTeamAvatar(DEFAULT_TEAM_AVATAR);
+    setRankingError("");
+    setRankingMessage(`Команда «${newTeam.name}» успешно добавлена в рейтинг!`);
+    setTimeout(() => setRankingMessage(""), 4000);
+  };
+
+  const handleStartEditTeam = (team: RankedTeam) => {
+    setEditingTeamId(team.id);
+    setEditTeamData({
+      name: team.name,
+      tag: team.tag || "",
+      points: team.points,
+      avatar: team.avatar || DEFAULT_TEAM_AVATAR,
+      season: team.season,
+    });
+  };
+
+  const handleSaveEditTeam = (id: string) => {
+    if (!editTeamData.name.trim()) return;
+    const updated = rankedTeams
+      .map((t) => {
+        if (t.id === id) {
+          return {
+            ...t,
+            name: editTeamData.name.trim(),
+            tag: editTeamData.tag.trim().toUpperCase(),
+            points: editTeamData.points,
+            avatar: editTeamData.avatar.trim() || DEFAULT_TEAM_AVATAR,
+            season: editTeamData.season,
+          };
+        }
+        return t;
+      })
+      .sort((a, b) => (b.points || 0) - (a.points || 0));
+
+    onSaveRankedTeams(updated);
+    setEditingTeamId(null);
+    setRankingMessage("Данные команды сохранены!");
+    setTimeout(() => setRankingMessage(""), 3000);
+  };
+
+  const handleConfirmDeleteTeam = () => {
+    if (!teamToDelete) return;
+    const updated = rankedTeams.filter((t) => t.id !== teamToDelete.id);
+    onSaveRankedTeams(updated);
+    setTeamToDelete(null);
+    setRankingMessage("Команда удалена из рейтинга.");
+    setTimeout(() => setRankingMessage(""), 3000);
+  };
+
+  const handleAddNewSeason = () => {
+    const trimmed = newSeasonInput.trim();
+    if (!trimmed) return;
+    if (!seasons.includes(trimmed)) {
+      const updated = [...seasons, trimmed];
+      onSaveSeasons(updated);
+      setRankingSeason(trimmed);
+      setNewTeamSeason(trimmed);
+    }
+    setNewSeasonInput("");
+    setShowAddSeason(false);
+  };
+
+  const handleResetRanking = () => {
+    onSaveRankedTeams([]);
+    setRankingMessage("Рейтинг очищен (все команды удалены).");
+    setTimeout(() => setRankingMessage(""), 3000);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fadeIn">
       <div
@@ -444,6 +658,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               >
                 <Plus className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{editingId ? "Редактировать" : "+ Добавить турнир"}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("ranking")}
+                className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === "ranking"
+                    ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                <span>Рейтинг команд ({rankedTeams.length})</span>
               </button>
 
               <button
@@ -957,6 +1183,612 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </form>
             )}
 
+            {/* Tab: Leaderboard & Team Ranking Management */}
+            {activeTab === "ranking" && (
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Header & Season Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Award className="w-5 h-5 text-amber-400" />
+                      <h4 className="text-sm font-bold text-white uppercase font-mono-tech">
+                        Управление рейтингом команд
+                      </h4>
+                    </div>
+                    <p className="text-xs text-neutral-400">
+                      Система автоматически ранжирует команды по очкам (MAX ↓). Добавляйте команды, меняйте очки и управляйте сезонами.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetRanking}
+                      className="text-xs font-mono-tech text-neutral-400 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 cursor-pointer"
+                      title="Восстановить исходные 15 команд"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Сброс демо-топа</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Notifications */}
+                {rankingMessage && (
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>{rankingMessage}</span>
+                  </div>
+                )}
+                {rankingError && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2 animate-fadeIn">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{rankingError}</span>
+                  </div>
+                )}
+
+                {/* Season Switcher in Admin */}
+                <div className="p-4 rounded-xl bg-neutral-900/90 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-xs font-mono-tech text-neutral-300 font-bold uppercase flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>ВЫБЕРИТЕ СЕЗОН ДЛЯ УПРАВЛЕНИЯ:</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowAddSeason(!showAddSeason)}
+                      className="text-xs font-mono-tech text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Добавить новый сезон</span>
+                    </button>
+                  </div>
+
+                  {showAddSeason && (
+                    <div className="p-3 rounded-lg bg-black/60 border border-white/10 flex items-center gap-2 animate-fadeIn">
+                      <input
+                        type="text"
+                        value={newSeasonInput}
+                        onChange={(e) => setNewSeasonInput(e.target.value)}
+                        placeholder="Название нового сезона (например: Сезон 2 (2026))"
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-neutral-900 border border-white/15 text-xs text-white focus:outline-none focus:border-white/40"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNewSeason}
+                        className="btn-chrome px-4 py-1.5 rounded-lg text-xs font-bold uppercase cursor-pointer"
+                      >
+                        Создать
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddSeason(false)}
+                        className="p-1.5 text-neutral-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {seasons.map((s) => {
+                      const count = rankedTeams.filter((t) => t.season === s).length;
+                      const isSelected = rankingSeason === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => {
+                            setRankingSeason(s);
+                            setNewTeamSeason(s);
+                          }}
+                          className={`px-3.5 py-1.5 rounded-lg text-xs font-mono-tech uppercase tracking-wide flex items-center gap-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-white text-black font-bold shadow-md shadow-white/10"
+                              : "bg-white/5 text-neutral-300 hover:text-white hover:bg-white/10 border border-white/10"
+                          }`}
+                        >
+                          <span>{s}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.2 rounded ${
+                              isSelected ? "bg-black/20 text-black" : "bg-white/10 text-neutral-400"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Form: Add New Team to Ranking */}
+                <div className="p-5 rounded-xl bg-neutral-900/60 border border-white/10 space-y-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+                    <Plus className="w-4 h-4 text-emerald-400" />
+                    <h5 className="font-display font-bold text-sm text-white uppercase">
+                      Добавить команду в {rankingSeason}
+                    </h5>
+                  </div>
+
+                  <form onSubmit={handleAddRankedTeam} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Team Name */}
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
+                          НАЗВАНИЕ КОМАНДЫ *
+                        </label>
+                        <input
+                          type="text"
+                          value={newTeamName}
+                          onChange={(e) => setNewTeamName(e.target.value)}
+                          placeholder="например: Cyber Wolves"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs focus:outline-none focus:border-white/40"
+                          required
+                        />
+                      </div>
+
+                      {/* Team Tag */}
+                      <div>
+                        <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
+                          ТЕГ (КЛАНТЕГ)
+                        </label>
+                        <input
+                          type="text"
+                          value={newTeamTag}
+                          onChange={(e) => setNewTeamTag(e.target.value)}
+                          placeholder="CW"
+                          maxLength={6}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs uppercase font-mono-tech focus:outline-none focus:border-white/40"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Points */}
+                      <div>
+                        <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
+                          НАЧАЛЬНЫЕ ОЧКИ (PTS) *
+                        </label>
+                        <input
+                          type="number"
+                          value={newTeamPoints}
+                          onChange={(e) => setNewTeamPoints(e.target.value)}
+                          placeholder="1000"
+                          min="0"
+                          step="10"
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs font-mono-tech focus:outline-none focus:border-white/40"
+                          required
+                        />
+                      </div>
+
+                      {/* Season */}
+                      <div>
+                        <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
+                          СЕЗОН
+                        </label>
+                        <select
+                          value={newTeamSeason}
+                          onChange={(e) => setNewTeamSeason(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs font-mono-tech focus:outline-none focus:border-white/40"
+                        >
+                          {seasons.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Team Avatar: Gallery Selection */}
+                    <div>
+                      <label className="block text-xs font-mono-tech text-neutral-400 mb-1.5 flex items-center justify-between">
+                        <span>АВАТАРКА / ЛОГОТИП КОМАНДЫ (ИЗ ГАЛЕРЕИ)</span>
+                        {newTeamAvatar && newTeamAvatar !== DEFAULT_TEAM_AVATAR && (
+                          <span className="text-[10px] text-emerald-400 font-mono-tech flex items-center gap-1 font-bold">
+                            <Check className="w-3 h-3" /> Фото выбрано
+                          </span>
+                        )}
+                      </label>
+
+                      {/* Hidden File Input for Gallery */}
+                      <input
+                        type="file"
+                        ref={newAvatarFileRef}
+                        accept="image/*"
+                        onChange={(e) => handleFileChosen(e, false)}
+                        className="hidden"
+                      />
+
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl bg-neutral-900 border border-white/15">
+                        {/* Avatar Preview */}
+                        <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-white/20 bg-black shrink-0 mx-auto sm:mx-0">
+                          <img
+                            src={newTeamAvatar}
+                            alt="Team Avatar Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = DEFAULT_TEAM_AVATAR;
+                            }}
+                          />
+                        </div>
+
+                        {/* Gallery Action Buttons */}
+                        <div className="flex-1 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => newAvatarFileRef.current?.click()}
+                            disabled={isUploadingAvatar}
+                            className="btn-chrome px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                          >
+                            <ImagePlus className="w-4 h-4" />
+                            <span>
+                              {isUploadingAvatar
+                                ? "Загрузка..."
+                                : newTeamAvatar && newTeamAvatar !== DEFAULT_TEAM_AVATAR
+                                ? "Выбрать другое фото из галереи"
+                                : "Выбрать фото из галереи"}
+                            </span>
+                          </button>
+
+                          {newTeamAvatar && newTeamAvatar !== DEFAULT_TEAM_AVATAR && (
+                            <button
+                              type="button"
+                              onClick={() => setNewTeamAvatar(DEFAULT_TEAM_AVATAR)}
+                              className="px-3 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-xs font-mono-tech transition-colors cursor-pointer"
+                            >
+                              Сбросить
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 font-mono-tech mt-1.5">
+                        Нажмите кнопку, чтобы загрузить картинку команды напрямую из галереи телефона или компьютера (PNG, JPG, WEBP).
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn-chrome px-6 py-2.5 rounded-lg text-xs font-extrabold uppercase flex items-center gap-2 cursor-pointer shadow-lg"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Добавить команду в рейтинг</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Team List for Current Season with Live Points Controls */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                    <h5 className="font-display font-bold text-sm text-white uppercase flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      <span>
+                        Команды сезона «{rankingSeason}» (
+                        {rankedTeams.filter((t) => t.season === rankingSeason).length})
+                      </span>
+                    </h5>
+                    <span className="text-[11px] font-mono-tech text-neutral-400">
+                      Автоматическая сортировка: от большего к меньшему
+                    </span>
+                  </div>
+
+                  {rankedTeams.filter((t) => t.season === rankingSeason).length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-white/10 rounded-xl">
+                      <p className="text-xs text-neutral-400">
+                        В этом сезоне еще нет добавленных команд. Заполните форму выше!
+                      </p>
+                    </div>
+                  ) : (
+                    rankedTeams
+                      .filter((t) => t.season === rankingSeason)
+                      .sort((a, b) => (b.points || 0) - (a.points || 0))
+                      .map((team, idx) => {
+                        const rank = idx + 1;
+                        const isTop1 = rank === 1;
+                        const isTop2 = rank === 2;
+                        const isTop3 = rank === 3;
+                        const isEditing = editingTeamId === team.id;
+
+                        if (isEditing) {
+                          return (
+                            <div
+                              key={team.id}
+                              className="p-4 rounded-xl bg-neutral-900 border-2 border-amber-400/60 space-y-3 animate-fadeIn"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-mono-tech text-amber-400 font-bold uppercase">
+                                  Редактирование команды #{rank}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingTeamId(null)}
+                                  className="text-neutral-400 hover:text-white"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="sm:col-span-2">
+                                  <label className="block text-[11px] font-mono-tech text-neutral-400 mb-1">
+                                    Название
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editTeamData.name}
+                                    onChange={(e) =>
+                                      setEditTeamData({ ...editTeamData, name: e.target.value })
+                                    }
+                                    className="w-full px-3 py-1.5 rounded-lg bg-black border border-white/20 text-white text-xs font-mono-tech"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-mono-tech text-neutral-400 mb-1">
+                                    Тег
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editTeamData.tag}
+                                    onChange={(e) =>
+                                      setEditTeamData({ ...editTeamData, tag: e.target.value })
+                                    }
+                                    className="w-full px-3 py-1.5 rounded-lg bg-black border border-white/20 text-white text-xs font-mono-tech"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] font-mono-tech text-neutral-400 mb-1">
+                                    Очки (PTS)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={editTeamData.points}
+                                    onChange={(e) =>
+                                      setEditTeamData({
+                                        ...editTeamData,
+                                        points: parseInt(e.target.value, 10) || 0,
+                                      })
+                                    }
+                                    className="w-full px-3 py-1.5 rounded-lg bg-black border border-white/20 text-white text-xs font-mono-tech"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-mono-tech text-neutral-400 mb-1">
+                                    Сезон
+                                  </label>
+                                  <select
+                                    value={editTeamData.season}
+                                    onChange={(e) =>
+                                      setEditTeamData({ ...editTeamData, season: e.target.value })
+                                    }
+                                    className="w-full px-3 py-1.5 rounded-lg bg-black border border-white/20 text-white text-xs font-mono-tech"
+                                  >
+                                    {seasons.map((s) => (
+                                      <option key={s} value={s}>
+                                        {s}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-mono-tech text-neutral-400 mb-1">
+                                  Аватарка / Логотип (из галереи)
+                                </label>
+                                <input
+                                  type="file"
+                                  ref={editAvatarFileRef}
+                                  accept="image/*"
+                                  onChange={(e) => handleFileChosen(e, true)}
+                                  className="hidden"
+                                />
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/20 bg-black shrink-0">
+                                    <img
+                                      src={editTeamData.avatar || DEFAULT_TEAM_AVATAR}
+                                      alt="Edit avatar preview"
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = DEFAULT_TEAM_AVATAR;
+                                      }}
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => editAvatarFileRef.current?.click()}
+                                    className="btn-chrome px-3 py-1.5 rounded-lg text-xs font-bold uppercase flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <ImagePlus className="w-3.5 h-3.5" />
+                                    <span>Выбрать фото из галереи</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingTeamId(null)}
+                                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono-tech text-neutral-300"
+                                >
+                                  Отмена
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveEditTeam(team.id)}
+                                  className="btn-chrome px-4 py-1.5 rounded-lg text-xs font-bold uppercase flex items-center gap-1.5"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Сохранить</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={team.id}
+                            className={`p-3 sm:p-4 rounded-xl border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+                              isTop1
+                                ? "bg-amber-950/20 border-amber-400/40"
+                                : isTop2
+                                ? "bg-slate-900/40 border-slate-400/30"
+                                : isTop3
+                                ? "bg-amber-950/10 border-amber-700/30"
+                                : "bg-neutral-900/60 border-white/10 hover:border-white/20"
+                            }`}
+                          >
+                            {/* Left: Rank & Team Info */}
+                            <div className="flex items-center gap-3">
+                              {/* Rank Medal / Badge */}
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
+                                {isTop1 ? (
+                                  <span className="text-xl" title="1-е место (Золото)">
+                                    🥇
+                                  </span>
+                                ) : isTop2 ? (
+                                  <span className="text-xl" title="2-е место (Серебро)">
+                                    🥈
+                                  </span>
+                                ) : isTop3 ? (
+                                  <span className="text-xl" title="3-е место (Бронза)">
+                                    🥉
+                                  </span>
+                                ) : (
+                                  <span className="text-neutral-400 font-mono-tech">
+                                    #{rank}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Avatar */}
+                              <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/15 bg-black shrink-0">
+                                <img
+                                  src={team.avatar}
+                                  alt={team.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = DEFAULT_TEAM_AVATAR;
+                                  }}
+                                />
+                              </div>
+
+                              {/* Name & Tag */}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-display font-bold text-white text-sm">
+                                    {team.name}
+                                  </span>
+                                  {team.tag && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-neutral-300 font-mono-tech">
+                                      {team.tag}
+                                    </span>
+                                  )}
+                                  {isTop1 && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase font-bold">
+                                      Топ-1
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-neutral-500 font-mono-tech">
+                                  ID: {team.id}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Right: Live Points Adjustment & Actions */}
+                            <div className="flex flex-wrap items-center gap-2 lg:gap-3 self-end lg:self-center">
+                              {/* Quick Adjustment Buttons (+100, +50, -50) */}
+                              <div className="flex items-center gap-1 bg-black/60 p-1 rounded-lg border border-white/10">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjustPoints(team.id, 100)}
+                                  className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-[10px] font-mono-tech font-bold transition-colors cursor-pointer"
+                                  title="Добавить +100 очков (команда поднимется в топе)"
+                                >
+                                  +100
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjustPoints(team.id, 50)}
+                                  className="px-2 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[10px] font-mono-tech font-bold transition-colors cursor-pointer"
+                                  title="Добавить +50 очков"
+                                >
+                                  +50
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjustPoints(team.id, -50)}
+                                  className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-mono-tech font-bold transition-colors cursor-pointer"
+                                  title="Отнять -50 очков (команда опустится в топе)"
+                                >
+                                  -50
+                                </button>
+                              </div>
+
+                              {/* Points Display & Direct Edit */}
+                              <div className="flex items-center gap-1.5 bg-black/80 px-2.5 py-1 rounded-lg border border-white/15">
+                                <input
+                                  type="number"
+                                  defaultValue={team.points}
+                                  key={team.points}
+                                  onBlur={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    if (!isNaN(val) && val !== team.points) {
+                                      handleSetPointsDirect(team.id, val);
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      const val = parseInt((e.target as HTMLInputElement).value, 10);
+                                      if (!isNaN(val)) {
+                                        handleSetPointsDirect(team.id, val);
+                                      }
+                                    }
+                                  }}
+                                  className="w-16 bg-transparent text-right font-mono-tech font-extrabold text-sm text-white focus:outline-none focus:text-amber-400"
+                                  title="Нажмите Enter для сохранения очков"
+                                />
+                                <span className="text-[10px] text-neutral-500 font-mono-tech">
+                                  PTS
+                                </span>
+                              </div>
+
+                              {/* Edit & Delete Action Buttons */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditTeam(team)}
+                                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                                  title="Редактировать команду"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setTeamToDelete({ id: team.id, name: team.name })
+                                  }
+                                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                                  title="Удалить из рейтинга"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Tab 3: Access for 2 Organizers (Phone & PC) */}
             {activeTab === "access" && (
               <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
@@ -1211,6 +2043,79 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {/* Delete Ranked Team Confirmation Modal (Safe for iframes) */}
+        {teamToDelete && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex items-center justify-center p-6 animate-fadeIn">
+            <div className="max-w-md w-full p-6 rounded-2xl bg-neutral-900 border border-red-500/40 shadow-2xl text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-display font-bold text-base text-white mb-1">
+                  Удалить команду из рейтинга?
+                </h4>
+                <p className="text-xs text-neutral-300">
+                  Команда <strong className="text-white">«{teamToDelete.name}»</strong> будет удалена из таблицы рейтинга.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTeamToDelete(null)}
+                  className="btn-chrome-dark px-4 py-2 rounded-lg text-xs font-bold uppercase cursor-pointer"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteTeam}
+                  className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase cursor-pointer transition-colors shadow-lg"
+                >
+                  Да, удалить
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset All Data Confirmation Modal */}
+        {showResetConfirm && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-30 flex items-center justify-center p-6 animate-fadeIn">
+            <div className="max-w-md w-full p-6 rounded-2xl bg-neutral-900 border border-red-500/40 shadow-2xl text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="font-display font-bold text-base text-white mb-1">
+                  Сбросить все данные сайта к исходным?
+                </h4>
+                <p className="text-xs text-neutral-300">
+                  Все добавленные турниры, команды рейтинга и настройки вернутся к начальным значениям по умолчанию.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(false)}
+                  className="btn-chrome-dark px-4 py-2 rounded-lg text-xs font-bold uppercase cursor-pointer"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetConfirm(false);
+                    onResetAll();
+                  }}
+                  className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase cursor-pointer transition-colors shadow-lg"
+                >
+                  Да, сбросить всё
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

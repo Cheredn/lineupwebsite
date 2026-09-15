@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tournament, SITE_CONFIG } from "./config/site";
 import { RankedTeam } from "./config/ranking";
+import { TournamentBracketData } from "./config/bracket";
 import {
   getStoredTournaments,
   saveStoredTournaments,
@@ -10,10 +11,19 @@ import {
   saveStoredRankedTeams,
   getStoredSeasons,
   saveStoredSeasons,
+  getStoredBracket,
+  saveStoredBracket,
   resetToDefaults,
   SiteSettings,
   authorizeCurrentDevice,
   SECRET_ADMIN_KEY,
+  fetchServerState,
+  saveServerTournaments,
+  saveServerBracket,
+  saveServerRankedTeams,
+  saveServerSeasons,
+  saveServerSettings,
+  resetServerState,
 } from "./utils/adminStorage";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
@@ -38,10 +48,52 @@ export default function App() {
 
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments());
+  const [bracket, setBracket] = useState<TournamentBracketData>(() => getStoredBracket());
   const [settings, setSettings] = useState<SiteSettings>(() => getStoredSettings());
   const [rankedTeams, setRankedTeams] = useState<RankedTeam[]>(() => getStoredRankedTeams());
   const [seasons, setSeasons] = useState<string[]>(() => getStoredSeasons());
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
+
+  // Sync state with server so all visitors see the latest tournaments & bracket
+  const syncWithServer = useCallback(async () => {
+    const serverData = await fetchServerState();
+    if (serverData) {
+      if (Array.isArray(serverData.tournaments)) {
+        setTournaments(serverData.tournaments);
+        saveStoredTournaments(serverData.tournaments);
+      }
+      if (serverData.bracket && Array.isArray(serverData.bracket.matches)) {
+        setBracket(serverData.bracket);
+        saveStoredBracket(serverData.bracket);
+      }
+      if (Array.isArray(serverData.rankedTeams)) {
+        setRankedTeams(serverData.rankedTeams);
+        saveStoredRankedTeams(serverData.rankedTeams);
+      }
+      if (Array.isArray(serverData.seasons) && serverData.seasons.length > 0) {
+        setSeasons(serverData.seasons);
+        saveStoredSeasons(serverData.seasons);
+      }
+      if (serverData.settings) {
+        setSettings(serverData.settings);
+        saveStoredSettings(serverData.settings);
+      }
+    }
+  }, []);
+
+  // Initial fetch and background sync (every 20 seconds or when user focuses window)
+  useEffect(() => {
+    syncWithServer();
+
+    const interval = setInterval(syncWithServer, 20000);
+    const handleFocus = () => syncWithServer();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [syncWithServer]);
 
   // Secret entry detection & hash synchronization
   useEffect(() => {
@@ -95,21 +147,31 @@ export default function App() {
   const handleUpdateTournaments = (updated: Tournament[]) => {
     setTournaments(updated);
     saveStoredTournaments(updated);
+    saveServerTournaments(updated);
+  };
+
+  const handleUpdateBracket = (updated: TournamentBracketData) => {
+    setBracket(updated);
+    saveStoredBracket(updated);
+    saveServerBracket(updated);
   };
 
   const handleUpdateSettings = (updated: SiteSettings) => {
     setSettings(updated);
     saveStoredSettings(updated);
+    saveServerSettings(updated);
   };
 
   const handleUpdateRankedTeams = (updated: RankedTeam[]) => {
     setRankedTeams(updated);
     saveStoredRankedTeams(updated);
+    saveServerRankedTeams(updated);
   };
 
   const handleUpdateSeasons = (updated: string[]) => {
     setSeasons(updated);
     saveStoredSeasons(updated);
+    saveServerSeasons(updated);
   };
 
   const handleResetAll = () => {
@@ -123,6 +185,7 @@ export default function App() {
     setSettings(defSettings);
     setRankedTeams(defTeams);
     setSeasons(defSeasons);
+    resetServerState();
   };
 
   const handleScrollToSection = (sectionId: string) => {
@@ -223,8 +286,8 @@ export default function App() {
             googleFormEmbedUrl={settings.googleFormEmbedUrl}
           />
 
-          {/* Tournament Bracket (GoodGame Integration) */}
-          <TournamentBracket bracketUrl={settings.bracketUrl} />
+          {/* Tournament Bracket (Native Custom Interactive CS2 Grid) */}
+          <TournamentBracket bracket={bracket} />
 
           {/* Rules Accordion Section */}
           <RulesAccordion />
@@ -258,6 +321,8 @@ export default function App() {
         }}
         tournaments={tournaments}
         onSaveTournaments={handleUpdateTournaments}
+        bracket={bracket}
+        onSaveBracket={handleUpdateBracket}
         settings={settings}
         onSaveSettings={handleUpdateSettings}
         rankedTeams={rankedTeams}
@@ -269,4 +334,5 @@ export default function App() {
     </div>
   );
 }
+
 

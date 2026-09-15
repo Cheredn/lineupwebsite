@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tournament } from "../config/site";
 import { RankedTeam, DEFAULT_TEAM_AVATAR, processImageFile } from "../config/ranking";
+import { TournamentBracketData } from "../config/bracket";
+import { AdminBracketEditor } from "./AdminBracketEditor";
 import {
   SiteSettings,
   getAdminPassword,
@@ -10,6 +12,7 @@ import {
   getSecretAdminUrl,
   SECRET_ADMIN_KEY,
   formatGoogleFormEmbedUrl,
+  serverAdminLogin,
 } from "../utils/adminStorage";
 import {
   Lock,
@@ -53,6 +56,8 @@ interface AdminModalProps {
   onClose: () => void;
   tournaments: Tournament[];
   onSaveTournaments: (tournaments: Tournament[]) => void;
+  bracket: TournamentBracketData;
+  onSaveBracket: (bracket: TournamentBracketData) => void;
   settings: SiteSettings;
   onSaveSettings: (settings: SiteSettings) => void;
   rankedTeams: RankedTeam[];
@@ -100,6 +105,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   onClose,
   tournaments,
   onSaveTournaments,
+  bracket,
+  onSaveBracket,
   settings,
   onSaveSettings,
   rankedTeams,
@@ -113,8 +120,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   const [authError, setAuthError] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  // Active sub-tab inside admin: "list" | "form" | "ranking" | "access" | "settings"
-  const [activeTab, setActiveTab] = useState<"list" | "form" | "ranking" | "access" | "settings">("list");
+  // Active sub-tab inside admin: "list" | "form" | "bracket" | "ranking" | "access" | "settings"
+  const [activeTab, setActiveTab] = useState<"list" | "form" | "bracket" | "ranking" | "access" | "settings">("list");
 
   // Ranking state
   const [rankingSeason, setRankingSeason] = useState<string>(seasons[0] || "Сезон 1 (2026)");
@@ -181,18 +188,20 @@ export const AdminModal: React.FC<AdminModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const entered = passwordInput.trim();
     const storedPw = getAdminPassword();
 
-    if (entered === storedPw || entered === SECRET_ADMIN_KEY) {
+    // Check server auth and local auth
+    const serverRes = await serverAdminLogin(entered);
+    if (serverRes.success || entered === storedPw || entered === SECRET_ADMIN_KEY) {
       setIsAuthenticated(true);
       authorizeCurrentDevice();
       setAuthError("");
       setPasswordInput("");
     } else {
-      setAuthError("Неверный пароль администратора. Попробуйте снова.");
+      setAuthError(serverRes.error || "Неверный пароль администратора. Попробуйте снова.");
     }
   };
 
@@ -658,6 +667,18 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               >
                 <Plus className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{editingId ? "Редактировать" : "+ Добавить турнир"}</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab("bracket")}
+                className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === "bracket"
+                    ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold text-amber-300"
+                    : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span>Сетка турнира</span>
               </button>
 
               <button
@@ -1786,6 +1807,13 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       })
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Tab: Bracket Editor */}
+            {activeTab === "bracket" && (
+              <div className="p-6 max-h-[75vh] overflow-y-auto">
+                <AdminBracketEditor bracket={bracket} onSaveBracket={onSaveBracket} />
               </div>
             )}
 

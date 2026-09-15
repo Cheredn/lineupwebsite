@@ -1,5 +1,6 @@
 import { SITE_CONFIG, Tournament } from "../config/site";
 import { RankedTeam, INITIAL_RANKED_TEAMS, DEFAULT_SEASONS } from "../config/ranking";
+import { TournamentBracketData, generateDefaultBracket } from "../config/bracket";
 
 export interface SiteSettings {
   telegramUrl: string;
@@ -11,6 +12,7 @@ export interface SiteSettings {
 
 const STORAGE_KEYS = {
   TOURNAMENTS: "lineup_tournaments_v1",
+  BRACKET: "lineup_bracket_v1",
   SETTINGS: "lineup_settings_v1",
   RANKED_TEAMS: "lineup_ranked_teams_v1",
   SEASONS: "lineup_seasons_v1",
@@ -21,6 +23,162 @@ const STORAGE_KEYS = {
 
 export const SECRET_ADMIN_KEY = "lineup2026";
 const DEFAULT_PASSWORD = "admin";
+
+// ==========================================
+// SERVER API SYNCHRONIZATION
+// ==========================================
+export interface ServerSiteData {
+  tournaments: Tournament[];
+  bracket: TournamentBracketData;
+  rankedTeams: RankedTeam[];
+  seasons: string[];
+  settings: SiteSettings;
+  lastUpdated: string;
+}
+
+export async function fetchServerState(): Promise<ServerSiteData | null> {
+  try {
+    const res = await fetch("/api/state", {
+      headers: { Accept: "application/json" },
+      cache: "no-cache",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data as ServerSiteData;
+  } catch (err) {
+    console.warn("Could not fetch server state (offline/development):", err);
+    return null;
+  }
+}
+
+export async function saveServerTournaments(tournaments: Tournament[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/tournaments", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tournaments }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to sync tournaments with server:", err);
+    return false;
+  }
+}
+
+export async function saveServerBracket(bracket: TournamentBracketData): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/bracket", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bracket }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to sync bracket with server:", err);
+    return false;
+  }
+}
+
+export async function saveServerRankedTeams(rankedTeams: RankedTeam[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/ranking", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rankedTeams }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to sync ranking with server:", err);
+    return false;
+  }
+}
+
+export async function saveServerSeasons(seasons: string[]): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/seasons", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seasons }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to sync seasons with server:", err);
+    return false;
+  }
+}
+
+export async function saveServerSettings(
+  settings: SiteSettings,
+  newPassword?: string
+): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings, newPassword }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to sync settings with server:", err);
+    return false;
+  }
+}
+
+export async function resetServerState(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/admin/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to reset server state:", err);
+    return false;
+  }
+}
+
+export async function serverAdminLogin(password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Ошибка авторизации" };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: "Сервер недоступен" };
+  }
+}
+
+// ==========================================
+// LOCAL STORAGE BACKUP / CACHE
+// ==========================================
+export const getStoredBracket = (): TournamentBracketData => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.BRACKET);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.matches)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load bracket from localStorage", e);
+  }
+  return generateDefaultBracket("LINEUP CS2 OPEN #1", 8, false);
+};
+
+export const saveStoredBracket = (bracket: TournamentBracketData): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.BRACKET, JSON.stringify(bracket));
+  } catch (e) {
+    console.error("Failed to save bracket to localStorage", e);
+  }
+};
 
 export const isDeviceAuthorized = (): boolean => {
   try {
@@ -61,19 +219,30 @@ export const formatGoogleFormEmbedUrl = (url: string): string => {
   return `${trimmed}?embedded=true`;
 };
 
+const DEMO_TOURNAMENT_IDS = new Set([
+  "lineup-open-1",
+  "lineup-weekly-2",
+  "lineup-invitational",
+]);
+
 export const getStoredTournaments = (): Tournament[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed;
+        // Automatically purge initial demo tournaments so user starts with a clean slate
+        const realTournaments = parsed.filter((t) => !DEMO_TOURNAMENT_IDS.has(t.id));
+        if (realTournaments.length !== parsed.length) {
+          saveStoredTournaments(realTournaments);
+        }
+        return realTournaments;
       }
     }
   } catch (e) {
     console.error("Failed to load tournaments from localStorage", e);
   }
-  return SITE_CONFIG.tournaments;
+  return [];
 };
 
 export const saveStoredTournaments = (tournaments: Tournament[]): void => {
@@ -265,7 +434,7 @@ export const resetToDefaults = (): {
     console.error("Failed to reset storage", e);
   }
   return {
-    tournaments: SITE_CONFIG.tournaments,
+    tournaments: [],
     settings: {
       telegramUrl: SITE_CONFIG.telegramUrl,
       telegramHandle: SITE_CONFIG.telegramHandle,

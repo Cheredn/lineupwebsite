@@ -67,22 +67,28 @@ export function subscribeCloudTournaments(
   }
 }
 
+// Helper to strip any undefined fields (which Firestore strictly rejects)
+function sanitizeForFirestore<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
 /**
  * Saves tournaments to Firestore so that EVERY player on the web sees them instantly
  */
 export async function saveCloudTournaments(tournaments: Tournament[]): Promise<boolean> {
   try {
+    const cleanTournaments = sanitizeForFirestore(tournaments);
     await setDoc(
       doc(db, "site_config", "tournaments"),
       {
-        list: tournaments,
+        list: cleanTournaments,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     );
 
     // Also persist each tournament in the /tournaments collection
-    for (const t of tournaments) {
+    for (const t of cleanTournaments) {
       if (t.id) {
         await setDoc(
           doc(db, "tournaments", t.id),
@@ -103,7 +109,7 @@ export async function saveCloudTournaments(tournaments: Tournament[]): Promise<b
 }
 
 /**
- * Listens for live bracket updates
+ * Listens for live bracket updates across all users and devices
  */
 export function subscribeCloudBracket(
   onUpdate: (bracket: TournamentBracketData) => void
@@ -131,14 +137,34 @@ export function subscribeCloudBracket(
 }
 
 /**
- * Saves tournament bracket to Firestore
+ * Fetches the latest cloud bracket directly
+ */
+export async function fetchCloudBracket(): Promise<TournamentBracketData | null> {
+  try {
+    const snap = await getDocFromServer(doc(db, "site_config", "bracket"));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.bracket && Array.isArray(data.bracket.matches)) {
+        return data.bracket as TournamentBracketData;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn("Could not fetch cloud bracket from server:", err);
+    return null;
+  }
+}
+
+/**
+ * Saves tournament bracket to Firestore so every visitor and account sees it instantly
  */
 export async function saveCloudBracket(bracket: TournamentBracketData): Promise<boolean> {
   try {
+    const cleanBracket = sanitizeForFirestore(bracket);
     await setDoc(
       doc(db, "site_config", "bracket"),
       {
-        bracket,
+        bracket: cleanBracket,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
@@ -187,11 +213,12 @@ export async function saveCloudRanking(
   currentSeason?: string
 ): Promise<boolean> {
   try {
+    const cleanTeams = sanitizeForFirestore(rankedTeams);
     const payload: Record<string, any> = {
-      rankedTeams,
+      rankedTeams: cleanTeams,
       updatedAt: new Date().toISOString(),
     };
-    if (seasons) payload.seasons = seasons;
+    if (seasons) payload.seasons = sanitizeForFirestore(seasons);
     if (currentSeason) payload.currentSeason = currentSeason;
 
     await setDoc(doc(db, "site_config", "ranking"), payload, { merge: true });
@@ -235,10 +262,11 @@ export function subscribeCloudSettings(
  */
 export async function saveCloudSettings(settings: SiteSettings): Promise<boolean> {
   try {
+    const cleanSettings = sanitizeForFirestore(settings);
     await setDoc(
       doc(db, "site_config", "settings"),
       {
-        settings,
+        settings: cleanSettings,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }

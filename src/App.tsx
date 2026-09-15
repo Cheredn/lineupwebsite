@@ -31,6 +31,7 @@ import {
   saveCloudTournaments,
   subscribeCloudBracket,
   saveCloudBracket,
+  fetchCloudBracket,
   subscribeCloudRanking,
   saveCloudRanking,
   subscribeCloudSettings,
@@ -100,14 +101,27 @@ export default function App() {
 
   // Real-time Firebase Cloud synchronization across all users and devices
   useEffect(() => {
+    // 1. Instant direct fetch of cloud bracket for initial load
+    fetchCloudBracket().then((cloudBracket) => {
+      if (cloudBracket && Array.isArray(cloudBracket.matches) && cloudBracket.matches.length > 0) {
+        setBracket(cloudBracket);
+        saveStoredBracket(cloudBracket);
+      }
+    });
+
+    // 2. Real-time onSnapshot listeners
     const unsubTournaments = subscribeCloudTournaments((cloudTournaments) => {
-      setTournaments(cloudTournaments);
-      saveStoredTournaments(cloudTournaments);
+      if (Array.isArray(cloudTournaments)) {
+        setTournaments(cloudTournaments);
+        saveStoredTournaments(cloudTournaments);
+      }
     });
 
     const unsubBracket = subscribeCloudBracket((cloudBracket) => {
-      setBracket(cloudBracket);
-      saveStoredBracket(cloudBracket);
+      if (cloudBracket && Array.isArray(cloudBracket.matches) && cloudBracket.matches.length > 0) {
+        setBracket(cloudBracket);
+        saveStoredBracket(cloudBracket);
+      }
     });
 
     const unsubRanking = subscribeCloudRanking((cloudTeams, cloudSeasons) => {

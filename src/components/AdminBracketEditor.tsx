@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TournamentBracketData,
   BracketMatch,
@@ -39,8 +39,16 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
   const [currentBracket, setCurrentBracket] = useState<TournamentBracketData>(bracket);
   const [editingMatch, setEditingMatch] = useState<BracketMatch | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string>("");
+  const [matchEditError, setMatchEditError] = useState<string>("");
   const [uploadingSlot, setUploadingSlot] = useState<1 | 2 | null>(null);
   const [activeView, setActiveView] = useState<"all" | "upper" | "lower">("all");
+
+  // Keep editor state in sync when bracket updates from cloud or other admins
+  useEffect(() => {
+    if (bracket && Array.isArray(bracket.matches)) {
+      setCurrentBracket(bracket);
+    }
+  }, [bracket]);
 
   // Temporary match edit state
   const [t1Name, setT1Name] = useState("");
@@ -67,6 +75,12 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
     }));
   };
 
+  const handleTitleBlur = () => {
+    if (currentBracket.tournamentTitle.trim() && currentBracket.tournamentTitle !== bracket.tournamentTitle) {
+      onSaveBracket(currentBracket);
+    }
+  };
+
   const handleToggleLowerBracket = () => {
     playTabClick();
     const newHasLower = !currentBracket.hasLowerBracket;
@@ -76,7 +90,8 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
       newHasLower
     );
     setCurrentBracket(regenerated);
-    setSaveSuccess(`Нижняя сетка ${newHasLower ? "включена (Double Elimination)" : "отключена (Single Elimination)"}`);
+    onSaveBracket(regenerated);
+    setSaveSuccess(`Нижняя сетка ${newHasLower ? "включена (Double Elimination)" : "отключена (Single Elimination)"} и сохранена в облаке!`);
     setTimeout(() => setSaveSuccess(""), 3500);
   };
 
@@ -88,20 +103,22 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
       currentBracket.hasLowerBracket
     );
     setCurrentBracket(regenerated);
-    setSaveSuccess(`Сетка перестроена на ${count} команд`);
+    onSaveBracket(regenerated);
+    setSaveSuccess(`Сетка перестроена на ${count} команд и сохранена в облаке!`);
     setTimeout(() => setSaveSuccess(""), 3500);
   };
 
   const handleSaveAll = () => {
     playSuccessChime();
     onSaveBracket(currentBracket);
-    setSaveSuccess("Турнирная сетка успешно сохранена на сервере!");
+    setSaveSuccess("Турнирная сетка сохранена и опубликована в облаке для всех игроков!");
     setTimeout(() => setSaveSuccess(""), 4000);
   };
 
   const handleOpenEditMatch = (m: BracketMatch) => {
     playTactileClick();
     setEditingMatch(m);
+    setMatchEditError("");
     setT1Name(m.team1.name || "");
     setT1Tag(m.team1.tag || "");
     setT1Avatar(m.team1.avatar || DEFAULT_TEAM_AVATAR);
@@ -121,6 +138,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingSlot(slot);
+    setMatchEditError("");
     try {
       const dataUrl = await processImageFile(file, 256);
       if (slot === 1) {
@@ -129,7 +147,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
         setT2Avatar(dataUrl);
       }
     } catch (err: any) {
-      alert(err.message || "Не удалось обработать изображение");
+      setMatchEditError(err.message || "Не удалось обработать изображение");
     } finally {
       setUploadingSlot(null);
       e.target.value = "";
@@ -270,6 +288,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
               type="text"
               value={currentBracket.tournamentTitle}
               onChange={(e) => handleTitleChange(e.target.value)}
+              onBlur={handleTitleBlur}
               placeholder="Например: LINEUP CS2 OPEN #1"
               className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-white text-xs font-bold focus:outline-none focus:border-amber-400/50"
             />
@@ -516,6 +535,13 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
             </div>
 
             <div className="space-y-5">
+              {matchEditError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{matchEditError}</span>
+                </div>
+              )}
+
               {/* Match status and format */}
               <div className="grid grid-cols-2 gap-3">
                 <div>

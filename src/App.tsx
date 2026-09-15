@@ -25,6 +25,17 @@ import {
   saveServerSettings,
   resetServerState,
 } from "./utils/adminStorage";
+import {
+  testFirebaseConnection,
+  subscribeCloudTournaments,
+  saveCloudTournaments,
+  subscribeCloudBracket,
+  saveCloudBracket,
+  subscribeCloudRanking,
+  saveCloudRanking,
+  subscribeCloudSettings,
+  saveCloudSettings,
+} from "./utils/firebase";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
 import { UpcomingTournaments } from "./components/UpcomingTournaments";
@@ -80,6 +91,48 @@ export default function App() {
         saveStoredSettings(serverData.settings);
       }
     }
+  }, []);
+
+  // Test Firebase connection on mount
+  useEffect(() => {
+    testFirebaseConnection();
+  }, []);
+
+  // Real-time Firebase Cloud synchronization across all users and devices
+  useEffect(() => {
+    const unsubTournaments = subscribeCloudTournaments((cloudTournaments) => {
+      setTournaments(cloudTournaments);
+      saveStoredTournaments(cloudTournaments);
+    });
+
+    const unsubBracket = subscribeCloudBracket((cloudBracket) => {
+      setBracket(cloudBracket);
+      saveStoredBracket(cloudBracket);
+    });
+
+    const unsubRanking = subscribeCloudRanking((cloudTeams, cloudSeasons) => {
+      if (Array.isArray(cloudTeams) && cloudTeams.length > 0) {
+        setRankedTeams(cloudTeams);
+        saveStoredRankedTeams(cloudTeams);
+      }
+      if (Array.isArray(cloudSeasons) && cloudSeasons.length > 0) {
+        setSeasons(cloudSeasons);
+        saveStoredSeasons(cloudSeasons);
+      }
+    });
+
+    const unsubSettings = subscribeCloudSettings((cloudSettings) => {
+      if (cloudSettings) {
+        setSettings((prev) => ({ ...prev, ...cloudSettings }));
+      }
+    });
+
+    return () => {
+      unsubTournaments();
+      unsubBracket();
+      unsubRanking();
+      unsubSettings();
+    };
   }, []);
 
   // Initial fetch and background sync (every 20 seconds or when user focuses window)
@@ -149,30 +202,35 @@ export default function App() {
     setTournaments(updated);
     saveStoredTournaments(updated);
     saveServerTournaments(updated);
+    saveCloudTournaments(updated);
   };
 
   const handleUpdateBracket = (updated: TournamentBracketData) => {
     setBracket(updated);
     saveStoredBracket(updated);
     saveServerBracket(updated);
+    saveCloudBracket(updated);
   };
 
   const handleUpdateSettings = (updated: SiteSettings) => {
     setSettings(updated);
     saveStoredSettings(updated);
     saveServerSettings(updated);
+    saveCloudSettings(updated);
   };
 
   const handleUpdateRankedTeams = (updated: RankedTeam[]) => {
     setRankedTeams(updated);
     saveStoredRankedTeams(updated);
     saveServerRankedTeams(updated);
+    saveCloudRanking(updated, seasons);
   };
 
   const handleUpdateSeasons = (updated: string[]) => {
     setSeasons(updated);
     saveStoredSeasons(updated);
     saveServerSeasons(updated);
+    saveCloudRanking(rankedTeams, updated);
   };
 
   const handleResetAll = () => {
@@ -187,6 +245,9 @@ export default function App() {
     setRankedTeams(defTeams);
     setSeasons(defSeasons);
     resetServerState();
+    saveCloudTournaments(defTournaments);
+    saveCloudSettings(defSettings);
+    saveCloudRanking(defTeams, defSeasons);
   };
 
   const handleScrollToSection = (sectionId: string) => {

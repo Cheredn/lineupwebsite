@@ -43,6 +43,11 @@ export async function fetchServerState(): Promise<ServerSiteData | null> {
       cache: "no-cache",
     });
     if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") || "";
+    // If the server returns HTML (e.g. Render static site SPA rewrite), ignore it
+    if (!contentType.includes("application/json")) {
+      return null;
+    }
     const data = await res.json();
     return data as ServerSiteData;
   } catch (err) {
@@ -219,30 +224,19 @@ export const formatGoogleFormEmbedUrl = (url: string): string => {
   return `${trimmed}?embedded=true`;
 };
 
-const DEMO_TOURNAMENT_IDS = new Set([
-  "lineup-open-1",
-  "lineup-weekly-2",
-  "lineup-invitational",
-]);
-
 export const getStoredTournaments = (): Tournament[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Automatically purge initial demo tournaments so user starts with a clean slate
-        const realTournaments = parsed.filter((t) => !DEMO_TOURNAMENT_IDS.has(t.id));
-        if (realTournaments.length !== parsed.length) {
-          saveStoredTournaments(realTournaments);
-        }
-        return realTournaments;
+        return parsed;
       }
     }
   } catch (e) {
     console.error("Failed to load tournaments from localStorage", e);
   }
-  return [];
+  return SITE_CONFIG.tournaments || [];
 };
 
 export const saveStoredTournaments = (tournaments: Tournament[]): void => {

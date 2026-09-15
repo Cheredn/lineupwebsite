@@ -1,0 +1,200 @@
+{
+  "tournaments": [],
+  "bracket": {
+    "id": "bracket-default-1",
+    "tournamentTitle": "LINEUP CS2 OPEN #1",
+    "hasLowerBracket": false,
+    "teamCount": 8,
+    "matches": [
+      {
+        "id": "UB-R1-M1",
+        "bracketType": "upper",
+        "round": 1,
+        "roundName": "Четвертьфинал",
+        "matchNumber": 1,
+        "team1": {
+          "name": "ECLIPSE ESPORTS",
+          "tag": "ECL",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "CYBER WOLVES",
+          "tag": "CW",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R2-M1",
+        "nextMatchSlot": 1
+      },
+      {
+        "id": "UB-R1-M2",
+        "bracketType": "upper",
+        "round": 1,
+        "roundName": "Четвертьфинал",
+        "matchNumber": 2,
+        "team1": {
+          "name": "NEXUS PRIME",
+          "tag": "NXS",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "AURORA FORCE",
+          "tag": "AF",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R2-M1",
+        "nextMatchSlot": 2
+      },
+      {
+        "id": "UB-R1-M3",
+        "bracketType": "upper",
+        "round": 1,
+        "roundName": "Четвертьфинал",
+        "matchNumber": 3,
+        "team1": {
+          "name": "VALKYRIE GAMING",
+          "tag": "VLK",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "TITAN CLAN",
+          "tag": "TTN",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R2-M2",
+        "nextMatchSlot": 1
+      },
+      {
+        "id": "UB-R1-M4",
+        "bracketType": "upper",
+        "round": 1,
+        "roundName": "Четвертьфинал",
+        "matchNumber": 4,
+        "team1": {
+          "name": "PHANTOM FIVE",
+          "tag": "P5",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "SOLARIS ESPORTS",
+          "tag": "SLR",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R2-M2",
+        "nextMatchSlot": 2
+      },
+      {
+        "id": "UB-R2-M1",
+        "bracketType": "upper",
+        "round": 2,
+        "roundName": "Полуфинал",
+        "matchNumber": 1,
+        "team1": {
+          "name": "Ожидает победителя 1",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "Ожидает победителя 2",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R3-M1",
+        "nextMatchSlot": 1
+      },
+      {
+        "id": "UB-R2-M2",
+        "bracketType": "upper",
+        "round": 2,
+        "roundName": "Полуфинал",
+        "matchNumber": 2,
+        "team1": {
+          "name": "Ожидает победителя 3",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "Ожидает победителя 4",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO1",
+        "nextMatchId": "UB-R3-M1",
+        "nextMatchSlot": 2
+      },
+      {
+        "id": "UB-R3-M1",
+        "bracketType": "upper",
+        "round": 3,
+        "roundName": "Гранд-финал",
+        "matchNumber": 1,
+        "team1": {
+          "name": "Финалист 1",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "team2": {
+          "name": "Финалист 2",
+          "tag": "",
+          "avatar": "",
+          "score": null,
+          "isWinner": false
+        },
+        "status": "UPCOMING",
+        "format": "BO3"
+      }
+    ],
+    "lastUpdated": "2026-09-15T00:47:15.992Z"
+  },
+  "rankedTeams": [],
+  "seasons": [
+    "Сезон 1 (2026)",
+    "Сезон 2 (2026)",
+    "Предсезон 2026"
+  ],
+  "settings": {
+    "googleFormUrl": "https://docs.google.com/forms/d/e/1FAIpQLScMcHvsl6MQWNxmqhalPbu6v2zcneoslkwHGS1V583CPtaaOQ/viewform",
+    "googleFormEmbedUrl": "https://docs.google.com/forms/d/e/1FAIpQLScMcHvsl6MQWNxmqhalPbu6v2zcneoslkwHGS1V583CPtaaOQ/viewform?embedded=true",
+    "telegramUrl": "https://t.me/LineUpT",
+    "telegramHandle": "@LineUpT",
+    "bracketUrl": "https://goodgame.ru/cup/bracket/12312312-6aa3285cc1161a00411b4c60"
+  },
+  "adminPassword": "lineup2026",
+  "lastUpdated": "2026-09-15T01:16:19.503Z"
+}

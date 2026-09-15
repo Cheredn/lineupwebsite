@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "Tournament": {
+      "title": "Tournament",
+      "description": "A gaming tournament hosted on LineUP Tournaments",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tournament"
+        },
+        "title": {
+          "type": "string",
+          "description": "Tournament title"
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Optional subtitle"
+        },
+        "game": {
+          "type": "string",
+          "description": "Game title, e.g. Counter-Strike 2"
+        },
+        "format": {
+          "type": "string",
+          "description": "Match format, e.g. 5x5"
+        },
+        "teamCount": {
+          "type": "number",
+          "description": "Target number of participating teams"
+        },
+        "registeredCount": {
+          "type": "number",
+          "description": "Number of currently registered teams"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date string of the tournament"
+        },
+        "time": {
+          "type": "string",
+          "description": "Start time of tournament"
+        },
+        "prizePool": {
+          "type": "string",
+          "description": "Total prize pool display"
+        },
+        "firstPlacePrize": {
+          "type": "string",
+          "description": "Prize for 1st place"
+        },
+        "secondPlacePrize": {
+          "type": "string",
+          "description": "Prize for 2nd place"
+        },
+        "thirdPlacePrize": {
+          "type": "string",
+          "description": "Prize for 3rd place"
+        },
+        "status": {
+          "type": "string",
+          "description": "Tournament status"
+        },
+        "region": {
+          "type": "string",
+          "description": "Region / Server region"
+        },
+        "serverLocation": {
+          "type": "string",
+          "description": "Location and tickrate of game servers"
+        },
+        "antiCheat": {
+          "type": "string",
+          "description": "Anti-cheat provider or notice"
+        },
+        "entryFee": {
+          "type": "string",
+          "description": "Entry fee"
+        },
+        "registrationDeadline": {
+          "type": "string",
+          "description": "Registration deadline string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      },
+      "required": ["id", "title", "game", "format", "status"]
+    },
+    "SiteConfigDoc": {
+      "title": "SiteConfigDoc",
+      "description": "Shared site state including brackets, teams, and settings",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Config document ID"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp"
+        }
+      },
+      "required": ["id"]
+    }
+  },
+  "firestore": {
+    "/tournaments/{tournamentId}": {
+      "schema": { "$ref": "#/entities/Tournament" },
+      "description": "Live tournaments collection visible to all players"
+    },
+    "/site_config/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfigDoc" },
+      "description": "Global bracket and team state documents"
+    }
+  }
+}

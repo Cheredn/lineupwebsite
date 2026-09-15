@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTournament(data) {
+      return data.id is string
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.game is string
+        && data.format is string
+        && data.status is string;
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow write: if isValidId(tournamentId) && isValidTournament(request.resource.data);
+      allow delete: if isValidId(tournamentId);
+    }
+
+    match /site_config/{configId} {
+      allow read: if true;
+      allow write: if isValidId(configId);
+    }
+
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

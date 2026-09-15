@@ -1,8 +1,13 @@
 import React from "react";
 import { SITE_CONFIG } from "../config/site";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Shield } from "lucide-react";
+import { playTactileClick } from "../utils/audio";
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenAdmin?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
   const navLinks = [
     { label: "ГЛАВНАЯ", href: "#hero" },
     { label: "ТУРНИРЫ", href: "#tournaments" },
@@ -14,6 +19,7 @@ export const Footer: React.FC = () => {
 
   const handleScrollTo = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
+    playTactileClick();
     const target = document.querySelector(href);
     if (target) {
       target.scrollIntoView({ behavior: "smooth" });
@@ -21,6 +27,7 @@ export const Footer: React.FC = () => {
   };
 
   const scrollToTop = () => {
+    playTactileClick();
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -106,6 +113,21 @@ export const Footer: React.FC = () => {
                 <span>НАВЕРХ</span>
                 <ArrowUp className="w-3.5 h-3.5" />
               </button>
+
+              {onOpenAdmin && (
+                <button
+                  onClick={() => {
+                    playTactileClick();
+                    onOpenAdmin();
+                  }}
+                  id="footer-admin-btn"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono-tech text-neutral-400 hover:text-amber-400/90 transition-colors cursor-pointer pt-1"
+                  title="Панель управления для организаторов"
+                >
+                  <Shield className="w-3 h-3 text-amber-500/70" />
+                  <span>ОРГАНИЗАТОРАМ</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

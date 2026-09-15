@@ -37,6 +37,7 @@ import { TournamentModal } from "./components/TournamentModal";
 import { AdminModal } from "./components/AdminModal";
 import { LeaderboardPage } from "./components/LeaderboardPage";
 import { Award, ChevronRight, Trophy } from "lucide-react";
+import { playTactileClick } from "./utils/audio";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<"home" | "leaderboard">(() => {
@@ -269,7 +270,10 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => handleNavigate("leaderboard")}
+                  onClick={() => {
+                    playTactileClick();
+                    handleNavigate("leaderboard");
+                  }}
                   className="btn-chrome px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shrink-0 cursor-pointer shadow-xl hover:shadow-amber-500/10"
                 >
                   <Trophy className="w-4 h-4 text-amber-400" />
@@ -301,7 +305,7 @@ export default function App() {
       )}
 
       {/* Official Footer */}
-      <Footer />
+      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
 
       {/* Tournament Details Modal */}
       <TournamentModal

@@ -15,6 +15,7 @@ import {
   Calendar,
   ExternalLink,
 } from "lucide-react";
+import { playTactileClick, playTabClick } from "../utils/audio";
 
 interface LeaderboardPageProps {
   teams: RankedTeam[];
@@ -78,7 +79,10 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <button
           type="button"
-          onClick={handleBack}
+          onClick={() => {
+            playTactileClick();
+            handleBack();
+          }}
           className="inline-flex items-center gap-2 text-xs font-mono-tech uppercase tracking-wider text-neutral-400 hover:text-white transition-colors cursor-pointer self-start group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -124,7 +128,10 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
               <button
                 key={season}
                 type="button"
-                onClick={() => setSelectedSeason(season)}
+                onClick={() => {
+                  playTabClick();
+                  setSelectedSeason(season);
+                }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-mono-tech uppercase tracking-wider transition-all cursor-pointer ${
                   selectedSeason === season
                     ? "bg-white text-black font-bold shadow-lg shadow-white/10"
@@ -142,7 +149,10 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
             <div className="flex items-center bg-black rounded-lg p-1 border border-white/10 text-xs font-mono-tech">
               <button
                 type="button"
-                onClick={() => setDisplayLimit(10)}
+                onClick={() => {
+                  playTabClick();
+                  setDisplayLimit(10);
+                }}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer uppercase ${
                   displayLimit === 10
                     ? "bg-white/15 text-white font-bold"
@@ -153,7 +163,10 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setDisplayLimit(15)}
+                onClick={() => {
+                  playTabClick();
+                  setDisplayLimit(15);
+                }}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer uppercase ${
                   displayLimit === 15
                     ? "bg-white/15 text-white font-bold"
@@ -164,7 +177,10 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setDisplayLimit("all")}
+                onClick={() => {
+                  playTabClick();
+                  setDisplayLimit("all");
+                }}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer uppercase ${
                   displayLimit === "all"
                     ? "bg-white/15 text-white font-bold"

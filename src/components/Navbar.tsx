@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SITE_CONFIG } from "../config/site";
 import { Menu, X, Shield, ExternalLink, Trophy, Award, Flame } from "lucide-react";
+import { playTactileClick, playTabClick } from "../utils/audio";
 
 interface NavbarProps {
   currentPage: "home" | "leaderboard";
@@ -21,6 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onOpenR
   }, []);
 
   const handleNavClick = (sectionId?: string) => {
+    playTabClick();
     setMobileMenuOpen(false);
     if (currentPage !== "home") {
       onNavigate("home");
@@ -43,12 +45,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onOpenR
   };
 
   const handleGoToLeaderboard = () => {
+    playTactileClick();
     setMobileMenuOpen(false);
     onNavigate("leaderboard");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleJoinClick = () => {
+    playTactileClick();
     setMobileMenuOpen(false);
     if (currentPage !== "home") {
       onNavigate("home");

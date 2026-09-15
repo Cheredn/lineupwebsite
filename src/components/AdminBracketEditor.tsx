@@ -25,6 +25,7 @@ import {
   Play,
   CheckCircle2,
 } from "lucide-react";
+import { playTactileClick, playTabClick, playSuccessChime } from "../utils/audio";
 
 interface AdminBracketEditorProps {
   bracket: TournamentBracketData;
@@ -67,6 +68,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
   };
 
   const handleToggleLowerBracket = () => {
+    playTabClick();
     const newHasLower = !currentBracket.hasLowerBracket;
     const regenerated = generateDefaultBracket(
       currentBracket.tournamentTitle,
@@ -79,6 +81,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
   };
 
   const handleChangeTeamCount = (count: 4 | 8 | 16) => {
+    playTabClick();
     const regenerated = generateDefaultBracket(
       currentBracket.tournamentTitle,
       count,
@@ -90,12 +93,14 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
   };
 
   const handleSaveAll = () => {
+    playSuccessChime();
     onSaveBracket(currentBracket);
     setSaveSuccess("Турнирная сетка успешно сохранена на сервере!");
     setTimeout(() => setSaveSuccess(""), 4000);
   };
 
   const handleOpenEditMatch = (m: BracketMatch) => {
+    playTactileClick();
     setEditingMatch(m);
     setT1Name(m.team1.name || "");
     setT1Tag(m.team1.tag || "");
@@ -180,6 +185,7 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
       );
     }
 
+    playSuccessChime();
     setCurrentBracket(newBracket);
     setEditingMatch(null);
     onSaveBracket(newBracket);
@@ -331,7 +337,10 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
         <div className="flex items-center gap-2 border-b border-white/10 pb-2">
           <button
             type="button"
-            onClick={() => setActiveView("all")}
+            onClick={() => {
+              playTabClick();
+              setActiveView("all");
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono-tech uppercase cursor-pointer ${
               activeView === "all" ? "bg-white text-black font-bold" : "text-neutral-400 hover:text-white"
             }`}
@@ -340,7 +349,10 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveView("upper")}
+            onClick={() => {
+              playTabClick();
+              setActiveView("upper");
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono-tech uppercase cursor-pointer ${
               activeView === "upper" ? "bg-white text-black font-bold" : "text-neutral-400 hover:text-white"
             }`}
@@ -349,7 +361,10 @@ export const AdminBracketEditor: React.FC<AdminBracketEditorProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveView("lower")}
+            onClick={() => {
+              playTabClick();
+              setActiveView("lower");
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono-tech uppercase cursor-pointer ${
               activeView === "lower" ? "bg-white text-black font-bold" : "text-neutral-400 hover:text-white"
             }`}

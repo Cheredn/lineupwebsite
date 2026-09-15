@@ -1,6 +1,7 @@
 import React from "react";
 import { SITE_CONFIG, Tournament } from "../config/site";
 import { Trophy, Calendar, Users, Shield, ArrowUpRight, Flame, Sparkles } from "lucide-react";
+import { playTactileClick } from "../utils/audio";
 
 interface UpcomingTournamentsProps {
   tournaments?: Tournament[];
@@ -54,6 +55,7 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
               href={SITE_CONFIG.telegramUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => playTactileClick()}
               className="inline-flex items-center gap-2 btn-chrome px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider"
             >
               <span>Подписаться на @LineUpT</span>
@@ -136,8 +138,8 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
                     </div>
                   </div>
 
-                  {/* Prize Pool Display */}
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-900/90 to-black border border-white/10 mb-6 flex items-center justify-between">
+                  {/* Prize Pool Display & Top 3 Distribution */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-900/90 to-black border border-white/10 mb-6 flex items-center justify-between gap-2">
                     <div>
                       <span className="block font-mono-tech text-[10px] tracking-wider text-amber-400/80 uppercase">
                         ПРИЗОВОЙ ФОНД
@@ -147,13 +149,18 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
                       </span>
                     </div>
 
-                    <div className="text-right">
-                      <span className="block text-[10px] text-neutral-400 font-mono-tech">
-                        1 МЕСТО: {t.firstPlacePrize}
+                    <div className="text-right space-y-0.5">
+                      <span className="block text-[10px] text-amber-300 font-mono-tech font-bold">
+                        🥇 1-Е: {t.firstPlacePrize}
                       </span>
-                      <span className="block text-[10px] text-neutral-400 font-mono-tech">
-                        2 МЕСТО: {t.secondPlacePrize}
+                      <span className="block text-[10px] text-slate-300 font-mono-tech">
+                        🥈 2-Е: {t.secondPlacePrize}
                       </span>
+                      {t.thirdPlacePrize && (
+                        <span className="block text-[10px] text-amber-600 font-mono-tech">
+                          🥉 3-Е: {t.thirdPlacePrize}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -161,7 +168,10 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
                 {/* Actions */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <button
-                    onClick={() => onSelectTournament(t)}
+                    onClick={() => {
+                      playTactileClick();
+                      onSelectTournament(t);
+                    }}
                     id={`view-tournament-btn-${t.id}`}
                     className="btn-chrome-dark py-2.5 px-3 rounded-lg text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer"
                   >
@@ -170,7 +180,10 @@ export const UpcomingTournaments: React.FC<UpcomingTournamentsProps> = ({
                   </button>
 
                   <button
-                    onClick={() => onRegisterClick(t)}
+                    onClick={() => {
+                      playTactileClick();
+                      onRegisterClick(t);
+                    }}
                     id={`register-tournament-btn-${t.id}`}
                     className={`py-2.5 px-3 rounded-lg text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
                       t.status === "РЕГИСТРАЦИЯ ОТКРЫТА"

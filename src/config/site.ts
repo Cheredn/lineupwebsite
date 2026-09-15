@@ -12,6 +12,7 @@ export interface Tournament {
   prizePool: string;
   firstPlacePrize: string;
   secondPlacePrize: string;
+  thirdPlacePrize?: string;
   status: "РЕГИСТРАЦИЯ ОТКРЫТА" | "В ПРОЦЕССЕ" | "СКОРО" | "ЗАВЕРШЕН";
   region: string;
   serverLocation: string;

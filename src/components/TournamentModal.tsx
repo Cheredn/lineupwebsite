@@ -1,6 +1,7 @@
 import React from "react";
 import { Tournament } from "../config/site";
 import { X, Trophy, Calendar, Users, Shield, MapPin, Clock, Server, CheckCircle2 } from "lucide-react";
+import { playTactileClick } from "../utils/audio";
 
 interface TournamentModalProps {
   tournament: Tournament | null;
@@ -38,7 +39,10 @@ export const TournamentModal: React.FC<TournamentModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              playTactileClick();
+              onClose();
+            }}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             aria-label="Закрыть окно"
           >
@@ -65,8 +69,11 @@ export const TournamentModal: React.FC<TournamentModalProps> = ({
             </div>
 
             <div className="text-right text-xs font-mono-tech space-y-1">
-              <div className="text-neutral-300">1 МЕСТО: <span className="text-white font-bold">{tournament.firstPlacePrize}</span></div>
-              <div className="text-neutral-400">2 МЕСТО: <span className="text-neutral-300">{tournament.secondPlacePrize}</span></div>
+              <div className="text-amber-300 font-bold">🥇 1 МЕСТО: <span className="text-white font-extrabold">{tournament.firstPlacePrize}</span></div>
+              <div className="text-slate-300">🥈 2 МЕСТО: <span className="text-neutral-200 font-semibold">{tournament.secondPlacePrize}</span></div>
+              {tournament.thirdPlacePrize && (
+                <div className="text-amber-600">🥉 3 МЕСТО: <span className="text-neutral-300 font-semibold">{tournament.thirdPlacePrize}</span></div>
+              )}
             </div>
           </div>
 
@@ -131,13 +138,17 @@ export const TournamentModal: React.FC<TournamentModalProps> = ({
         {/* Footer Actions */}
         <div className="p-5 border-t border-white/10 bg-neutral-900/80 flex items-center justify-end gap-3">
           <button
-            onClick={onClose}
+            onClick={() => {
+              playTactileClick();
+              onClose();
+            }}
             className="btn-chrome-dark px-5 py-2.5 rounded-lg text-xs font-bold tracking-wider uppercase cursor-pointer"
           >
             Закрыть
           </button>
           <button
             onClick={() => {
+              playTactileClick();
               onClose();
               onRegister(tournament);
             }}

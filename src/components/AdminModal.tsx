@@ -3,6 +3,7 @@ import { Tournament } from "../config/site";
 import { RankedTeam, DEFAULT_TEAM_AVATAR, processImageFile } from "../config/ranking";
 import { TournamentBracketData } from "../config/bracket";
 import { AdminBracketEditor } from "./AdminBracketEditor";
+import { playTactileClick, playTabClick, playSuccessChime } from "../utils/audio";
 import {
   SiteSettings,
   getAdminPassword,
@@ -89,8 +90,9 @@ const EMPTY_TOURNAMENT: Omit<Tournament, "id"> = {
   date: "15 ОКТ 2026",
   time: "18:00 МСК",
   prizePool: "$500 CAD",
-  firstPlacePrize: "$350 CAD",
+  firstPlacePrize: "$300 CAD",
   secondPlacePrize: "$150 CAD",
+  thirdPlacePrize: "$50 CAD",
   status: "РЕГИСТРАЦИЯ ОТКРЫТА",
   region: "Европа / СНГ",
   serverLocation: "Франкфурт и Стокгольм (эквивалент 128-tick)",
@@ -196,6 +198,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
     // Check server auth and local auth
     const serverRes = await serverAdminLogin(entered);
     if (serverRes.success || entered === storedPw || entered === SECRET_ADMIN_KEY) {
+      playSuccessChime();
       setIsAuthenticated(true);
       authorizeCurrentDevice();
       setAuthError("");
@@ -206,6 +209,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleStartAdd = () => {
+    playTactileClick();
     setEditingId(null);
     setFormData({
       ...EMPTY_TOURNAMENT,
@@ -217,6 +221,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleStartEdit = (t: Tournament) => {
+    playTactileClick();
     setEditingId(t.id);
     setFormData({
       title: t.title,
@@ -229,6 +234,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       prizePool: t.prizePool,
       firstPlacePrize: t.firstPlacePrize,
       secondPlacePrize: t.secondPlacePrize,
+      thirdPlacePrize: t.thirdPlacePrize || "",
       status: t.status,
       region: t.region,
       serverLocation: t.serverLocation,
@@ -285,6 +291,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
   };
 
   const handleToggleMap = (mapName: string) => {
+    playTabClick();
     setFormData((prev) => {
       const exists = prev.maps.includes(mapName);
       if (exists) {
@@ -303,6 +310,8 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       setFormErrorMessage("Пожалуйста, укажите название турнира.");
       return;
     }
+
+    playSuccessChime();
 
     if (editingId) {
       // Update existing
@@ -646,7 +655,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
             {/* Nav Tabs */}
             <div className="flex border-b border-white/10 bg-black/40 px-6 pt-3 gap-2 overflow-x-auto">
               <button
-                onClick={() => setActiveTab("list")}
+                onClick={() => {
+                  playTabClick();
+                  setActiveTab("list");
+                }}
                 className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "list"
                     ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold"
@@ -670,7 +682,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab("bracket")}
+                onClick={() => {
+                  playTabClick();
+                  setActiveTab("bracket");
+                }}
                 className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "bracket"
                     ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold text-amber-300"
@@ -682,7 +697,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab("ranking")}
+                onClick={() => {
+                  playTabClick();
+                  setActiveTab("ranking");
+                }}
                 className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "ranking"
                     ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold"
@@ -694,7 +712,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab("access")}
+                onClick={() => {
+                  playTabClick();
+                  setActiveTab("access");
+                }}
                 className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "access"
                     ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold"
@@ -706,7 +727,10 @@ export const AdminModal: React.FC<AdminModalProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab("settings")}
+                onClick={() => {
+                  playTabClick();
+                  setActiveTab("settings");
+                }}
                 className={`px-4 py-2.5 rounded-t-lg text-xs font-mono-tech tracking-wider uppercase flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "settings"
                     ? "bg-neutral-900 text-white border-t border-x border-white/20 font-bold"
@@ -1031,7 +1055,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                 </div>
 
                 {/* Prizes & Status */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
                       ОБЩИЙ ПРИЗОВОЙ ФОНД
@@ -1042,36 +1066,6 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       onChange={(e) => setFormData({ ...formData, prizePool: e.target.value })}
                       placeholder="$500 CAD"
                       className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs focus:outline-none focus:border-white/40 font-mono-tech font-bold text-amber-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
-                      1-Е МЕСТО
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.firstPlacePrize}
-                      onChange={(e) =>
-                        setFormData({ ...formData, firstPlacePrize: e.target.value })
-                      }
-                      placeholder="$350 CAD"
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs focus:outline-none focus:border-white/40 font-mono-tech"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono-tech text-neutral-400 mb-1">
-                      2-Е МЕСТО
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.secondPlacePrize}
-                      onChange={(e) =>
-                        setFormData({ ...formData, secondPlacePrize: e.target.value })
-                      }
-                      placeholder="$150 CAD"
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-900 border border-white/15 text-white text-xs focus:outline-none focus:border-white/40 font-mono-tech"
                     />
                   </div>
 
@@ -1094,6 +1088,69 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                       <option value="СКОРО">СКОРО</option>
                       <option value="ЗАВЕРШЕН">ЗАВЕРШЕН</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Top 3 Places Prize Distribution */}
+                <div className="p-4 rounded-xl bg-neutral-900/90 border border-amber-500/25 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono-tech uppercase font-bold text-amber-300 flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400" />
+                      НАГРАДЫ ЗА ТОП-3 МЕСТА (ПРИЗЫ / ОЧКИ)
+                    </span>
+                    <span className="text-[10px] text-neutral-400 font-mono-tech">
+                      1-е, 2-е и 3-е места
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 1st Place */}
+                    <div className="p-3 rounded-lg bg-black/60 border border-amber-400/40">
+                      <label className="block text-[11px] font-mono-tech text-amber-300 font-bold mb-1.5 flex items-center gap-1.5">
+                        <span>🥇 1-Е МЕСТО (ЗОЛОТО)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.firstPlacePrize}
+                        onChange={(e) =>
+                          setFormData({ ...formData, firstPlacePrize: e.target.value })
+                        }
+                        placeholder="$300 CAD / 100 PTS"
+                        className="w-full px-3 py-2 rounded-md bg-neutral-900 border border-white/15 text-amber-300 text-xs font-mono-tech font-bold focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    {/* 2nd Place */}
+                    <div className="p-3 rounded-lg bg-black/60 border border-slate-300/40">
+                      <label className="block text-[11px] font-mono-tech text-slate-200 font-bold mb-1.5 flex items-center gap-1.5">
+                        <span>🥈 2-Е МЕСТО (СЕРЕБРО)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.secondPlacePrize}
+                        onChange={(e) =>
+                          setFormData({ ...formData, secondPlacePrize: e.target.value })
+                        }
+                        placeholder="$150 CAD / 50 PTS"
+                        className="w-full px-3 py-2 rounded-md bg-neutral-900 border border-white/15 text-slate-200 text-xs font-mono-tech font-bold focus:outline-none focus:border-slate-300"
+                      />
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="p-3 rounded-lg bg-black/60 border border-amber-700/40">
+                      <label className="block text-[11px] font-mono-tech text-amber-600 font-bold mb-1.5 flex items-center gap-1.5">
+                        <span>🥉 3-Е МЕСТО (БРОНЗА)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.thirdPlacePrize || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, thirdPlacePrize: e.target.value })
+                        }
+                        placeholder="$50 CAD / 25 PTS"
+                        className="w-full px-3 py-2 rounded-md bg-neutral-900 border border-white/15 text-amber-500 text-xs font-mono-tech font-bold focus:outline-none focus:border-amber-600"
+                      />
+                    </div>
                   </div>
                 </div>
 

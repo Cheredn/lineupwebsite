@@ -1,6 +1,7 @@
 import React from "react";
 import { SITE_CONFIG, Tournament } from "../config/site";
 import { Trophy, Swords, ShieldCheck, ChevronDown, Sparkles } from "lucide-react";
+import { playTactileClick } from "../utils/audio";
 
 interface HeroProps {
   featuredTournament?: Tournament;
@@ -115,7 +116,10 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-16">
           <button
-            onClick={onJoinClick}
+            onClick={() => {
+              playTactileClick();
+              onJoinClick();
+            }}
             id="hero-join-tournament-btn"
             className="w-full sm:w-auto btn-chrome px-8 py-3.5 rounded-xl text-sm font-extrabold tracking-wider uppercase flex items-center justify-center gap-2.5 shadow-xl shadow-white/10 cursor-pointer group"
           >
@@ -124,7 +128,10 @@ export const Hero: React.FC<HeroProps> = ({
           </button>
 
           <button
-            onClick={onViewBracketClick}
+            onClick={() => {
+              playTactileClick();
+              onViewBracketClick();
+            }}
             id="hero-view-bracket-btn"
             className="w-full sm:w-auto btn-chrome-dark px-8 py-3.5 rounded-xl text-sm font-bold tracking-wider uppercase flex items-center justify-center gap-2.5 cursor-pointer"
           >

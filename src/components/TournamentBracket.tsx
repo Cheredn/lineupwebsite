@@ -14,6 +14,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { playTabClick, playTactileClick } from "../utils/audio";
 
 interface TournamentBracketProps {
   bracket: TournamentBracketData;
@@ -87,7 +88,10 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ bracket })
           <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
             <button
               type="button"
-              onClick={() => setActiveTab("all")}
+              onClick={() => {
+                playTabClick();
+                setActiveTab("all");
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-mono-tech uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "all"
                   ? "bg-white text-black font-bold shadow-lg"
@@ -98,7 +102,10 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ bracket })
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("upper")}
+              onClick={() => {
+                playTabClick();
+                setActiveTab("upper");
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-mono-tech uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "upper"
                   ? "bg-white text-black font-bold shadow-lg"
@@ -109,7 +116,10 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ bracket })
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("lower")}
+              onClick={() => {
+                playTabClick();
+                setActiveTab("lower");
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-mono-tech uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "lower"
                   ? "bg-amber-400 text-black font-bold shadow-lg shadow-amber-500/10"
@@ -263,7 +273,10 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({ bracket })
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedMatch(null)}
+                onClick={() => {
+                  playTactileClick();
+                  setSelectedMatch(null);
+                }}
                 className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -384,7 +397,10 @@ const PublicMatchCard: React.FC<PublicMatchCardProps> = ({ match, onSelect, isGr
 
   return (
     <div
-      onClick={onSelect}
+      onClick={() => {
+        playTactileClick();
+        onSelect();
+      }}
       className={`relative rounded-xl border transition-all cursor-pointer group select-none ${
         isGrandFinal
           ? "bg-gradient-to-b from-amber-500/10 via-neutral-900 to-black border-amber-400/40 shadow-xl shadow-amber-500/5 hover:border-amber-400/70"
